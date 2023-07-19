@@ -43,6 +43,7 @@ def rateone():
     genre = []
     movie = request.json.get('movie')
     movie.replace(" ", "+")
+    print("Input data: ", movie)
     response = requests.get("https://api.themoviedb.org/3/search/movie?api_key=916893c3e71b0b37e324a142b99253f0&query={}".format(movie))
     response_data = response.json()
     if len(response_data['results'])<=1:
