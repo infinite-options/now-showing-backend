@@ -83,6 +83,7 @@ def ratetwo():
     id = response_data['id']
     user_id = request.json.get('user_id')
     user_rating = request.json.get('user_rating')
+    print("Input data: ", id)
     mycursor = cnx.cursor()
     mycursor.execute("call new_rating_id(@record);")
     #mycursor.execute("INSERT INTO `Ratings` (`Rating_ID`, `User_ID`, `Movie_Name`, `User_Rating`) VALUES (@record, %s, %s, %s)",(user_id, response_data['results'][0]['original_title'], user_rating))
