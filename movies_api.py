@@ -43,7 +43,6 @@ def rateone():
     genre = []
     movie = request.json.get('movie')
     movie.replace(" ", "+")
-    print("Input data: ", movie)
     response = requests.get("https://api.themoviedb.org/3/search/movie?api_key=916893c3e71b0b37e324a142b99253f0&query={}".format(movie))
     response_data = response.json()
     if len(response_data['results'])<=1:
@@ -59,7 +58,7 @@ def rateone():
         user_id = request.json.get('user_id')
         user_rating = request.json.get('user_rating')
         mycursor.execute("call new_rating_id(@record);")
-        mycursor.execute("INSERT INTO `Ratings`(`Rating_ID`, `User_ID`, `Movie_Name`, `User_Rating`, `Genres`, `Backdrop`, `Movie_ID`) VALUES(@record, %s, %s, %s, %s, %s, %s)",(user_id, response_data['original_title'], user_rating, genres, backdrop_path, id))
+        mycursor.execute("INSERT INTO `Ratings`(`Rating_ID`, `User_ID`, `Movie_Name`, `User_Rating`, `Genres`, `Backdrop`, `Movie_ID`) VALUES(@record, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE User_Rating = %s;",(user_id, response_data['original_title'], user_rating, genres, backdrop_path, id, user_rating))
         cnx.commit()
         cnx.close()
         return 'ok'
@@ -83,11 +82,10 @@ def ratetwo():
     id = response_data['id']
     user_id = request.json.get('user_id')
     user_rating = request.json.get('user_rating')
-    print("Input data: ", id)
     mycursor = cnx.cursor()
     mycursor.execute("call new_rating_id(@record);")
     #mycursor.execute("INSERT INTO `Ratings` (`Rating_ID`, `User_ID`, `Movie_Name`, `User_Rating`) VALUES (@record, %s, %s, %s)",(user_id, response_data['results'][0]['original_title'], user_rating))
-    mycursor.execute("INSERT INTO `Ratings`(`Rating_ID`, `User_ID`, `Movie_Name`, `User_Rating`, `Genres`, `Backdrop`, `Movie_ID`) VALUES(@record, %s, %s, %s, %s, %s, %s)",(user_id, response_data['original_title'], user_rating, genres, backdrop_path, id))
+    mycursor.execute("INSERT INTO `Ratings`(`Rating_ID`, `User_ID`, `Movie_Name`, `User_Rating`, `Genres`, `Backdrop`, `Movie_ID`) VALUES(@record, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE User_Rating = %s;",(user_id, response_data['original_title'], user_rating, genres, backdrop_path, id, user_rating))
     cnx.commit()
     cnx.close()
     return 'ok'
