@@ -326,6 +326,42 @@ def get_new_matrixUID(conn):
 
 
 # SELECT MOVIES
+class search(Resource):
+    def get(self):
+        print("in Movies")
+
+        movie = request.json.get('movie')
+        print("Received: ", movie)
+        movie.replace(" ", "+")
+
+        try:
+            response = requests.get(
+                "https://api.themoviedb.org/3/search/movie?api_key=916893c3e71b0b37e324a142b99253f0&query={}".format(movie))
+            response_data = response.json()
+
+            print("https://api.themoviedb.org/3/search/movie?api_key=916893c3e71b0b37e324a142b99253f0&query={}".format(movie))
+            print(response_data)
+            print("Number of Responses", len(response_data['results']))
+            return(response_data)
+           
+
+
+
+
+
+            
+        except:
+            print("Issue with TMDB Movie Search API")
+
+
+        finally:
+            print("Completed running Search Endpoint")
+            
+
+
+
+
+# POKER ENDPOINTS
 class pre_flop_tables(Resource):
     def get(self):
         print("in Pre_Flop")
@@ -645,6 +681,8 @@ class songs(Resource):
 # Make sure port number is unused (i.e. don't use numbers 0-1023)
 
 # GET requests
+api.add_resource(search, '/api/v2/search')
+
 api.add_resource(pre_flop_tables, '/api/v2/preflop')
 api.add_resource(pre_flop_tables_post, '/api/v2/preflop_post')
 
