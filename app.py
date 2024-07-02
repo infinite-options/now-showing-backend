@@ -5,8 +5,8 @@ import requests
 app = Flask(__name__)
 
 # Load data
-movies = pickle.load(open("movies_list.pkl", 'rb'))
-similarity = pickle.load(open("similarity.pkl", 'rb'))
+movies = pickle.load(open("movies.pkl", 'rb'))
+ratings = pickle.load(open("ratings.pkl", 'rb'))
 
 # TMDB API key
 API_KEY = "b8b76ccfa61c6e85ca7e096d905a7d63"
@@ -33,7 +33,7 @@ def fetch_movie_data(movie_id):
 def recommend(movie):
     index = movies[movies['title'] == movie].index[0]
     distances = sorted(
-        list(enumerate(similarity[index])), reverse=True, key=lambda x: x[1])
+        list(enumerate(ratings[index])), reverse=True, key=lambda x: x[1])
     recommended_movies = []
     for i in distances[1:6]:
         movie_id = movies.iloc[i[0]].id
