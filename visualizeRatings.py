@@ -11,14 +11,14 @@ from typing import List
 client = boto3.client("s3")
 app = FastAPI()
 
-# ratings = pd.read_csv("https://now-showing.s3.us-west-1.amazonaws.com/movies_ratings.csv")
-# movies = pd.read_csv("https://now-showing.s3.us-west-1.amazonaws.com/movies_genres.csv")
+ratings = pd.read_csv("https://now-showing.s3.us-west-1.amazonaws.com/movies_ratings.csv")
+movies = pd.read_csv("https://now-showing.s3.us-west-1.amazonaws.com/movies_genres.csv")
 
 # ratings = pd.read_csv("/Users/anisha/Desktop/Infinite Options/Rec Sys/dataset/ratings.csv")
 # movies = pd.read_csv("/Users/anisha/Desktop/Infinite Options/Rec Sys/dataset/movies.csv")
 
-movies = pd.read_csv('s3://now-showing/movies_genres.csv')
-ratings = pd.read_csv('s3://now-showing/movies_ratings.csv')
+# movies = pd.read_csv('s3://now-showing/movies_genres.csv')
+# ratings = pd.read_csv('s3://now-showing/movies_ratings.csv')
 
 
 # Preprocess the dataset
@@ -139,5 +139,5 @@ def recommend(user_ratings: UserRatings):
 
 
 if __name__ == '__main__':
-    import uvicorn
-    uvicorn.run(app, host='127.0.0.1', port=8000)
+    # import uvicorn
+    app.run(app, host='127.0.0.1', port=8000)
