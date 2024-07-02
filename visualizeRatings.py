@@ -4,11 +4,22 @@ import pandas as pd
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from typing import Dict
+import boto3
+from fuzzywuzzy import process
+from typing import List
 
+client = boto3.client("s3")
 app = FastAPI()
 
-ratings = pd.read_csv("/Users/anisha/Jupyter Notebok/ratings.csv")
-movies = pd.read_csv("/Users/anisha/Jupyter Notebok/movies.csv")
+# ratings = pd.read_csv("https://now-showing.s3.us-west-1.amazonaws.com/movies_ratings.csv")
+# movies = pd.read_csv("https://now-showing.s3.us-west-1.amazonaws.com/movies_genres.csv")
+
+# ratings = pd.read_csv("/Users/anisha/Desktop/Infinite Options/Rec Sys/dataset/ratings.csv")
+# movies = pd.read_csv("/Users/anisha/Desktop/Infinite Options/Rec Sys/dataset/movies.csv")
+
+movies = pd.read_csv('s3://now-showing/movies_genres.csv')
+ratings = pd.read_csv('s3://now-showing/movies_ratings.csv')
+
 
 # Preprocess the dataset
 # Remove movies that do not have any genres listed from both movies and ratings dataset
@@ -50,8 +61,31 @@ ratings_with_movies.sort_values('movieId')
 user_item_matrix = ratings.pivot_table(columns='userId', index='movieId', values='rating').fillna(0)
 
 
+class MovieRequest(BaseModel):
+    title: str
+
+
+class MovieResponse(BaseModel):
+    similar_titles: List[str]
+
+
 class UserRatings(BaseModel):
     ratings: Dict[int, float]
+
+
+@app.post("/find_movie/", response_model=MovieResponse)
+def find_movie(movie_request: MovieRequest):
+    title = movie_request.title
+    # Check if the exact title exists
+    exact_match = movies[movies['title'].str.lower() == title.lower()]
+    if not exact_match.empty:
+        return MovieResponse(similar_titles=[title])
+
+    # If exact match is not found, find similar titles
+    similar_titles = process.extract(title, movies['title'], limit=5)
+    similar_titles_list = [title for title, score, idx in similar_titles]
+
+    return MovieResponse(similar_titles=similar_titles_list)
 
 
 @app.post("/recommend")
