@@ -317,7 +317,7 @@ def helper_icon_img(url):
 
 # MOVIE RECOMMENDATIONS
 
-movies = pd.read_csv('s3://now-showing/movies_genres.csv')
+genres = pd.read_csv('s3://now-showing/movies_genres.csv')
 ratings = pd.read_csv('s3://now-showing/movies_ratings.csv')
 movie_id = 1  # default movie choice
 
@@ -360,19 +360,32 @@ def fetch_tmdb_data(movie_title):
 
 def find_similar_movies(movie_id):
     print("In find_similar_movies ", movie_id)
-    print(ratings["movieId"] == movie_id)
+    print(ratings[ratings["movieId"] == movie_id])
+    print(ratings[(ratings["movieId"] == movie_id) & (
+        ratings["rating"] > 4)])
+
+    # Find Other Users who liked the same movie
     similar_users = ratings[(ratings["movieId"] == movie_id) & (
         ratings["rating"] > 4)]["userId"].unique()
+    print("Similar Users: ", similar_users)
+
+    # Find Other Movies that the Similar Users Liked
     similar_user_recs = ratings[(ratings["userId"].isin(
         similar_users)) & (ratings["rating"] > 4)]["movieId"]
+    print("Similar Users Recommendations: ", similar_user_recs)
 
+    print('1')
     similar_user_recs = similar_user_recs.value_counts() / len(similar_users)
     similar_user_recs = similar_user_recs[similar_user_recs > .1]
+
+    print('2')
 
     all_users = ratings[(ratings["movieId"].isin(
         similar_user_recs.index)) & (ratings["rating"] > 4)]
     all_user_recs = all_users["movieId"].value_counts(
     ) / len(all_users["userId"].unique())
+
+    print('3')
 
     rec_percentages = pd.concat([similar_user_recs, all_user_recs], axis=1)
     rec_percentages.columns = ["similar", "all"]
@@ -381,7 +394,13 @@ def find_similar_movies(movie_id):
         rec_percentages["all"]
     rec_percentages = rec_percentages.sort_values("score", ascending=False)
 
-    return rec_percentages.head(rec_num).merge(movies, left_index=True, right_on="movieId")
+    print('4')
+    print(rec_percentages.head(rec_num))
+    print('4.5')
+    print(genres[genres['movieId'] == movie_id])
+    print(rec_percentages.head(rec_num).merge(genres, left_index=True, right_on="movieId"))
+
+    return rec_percentages.head(rec_num).merge(genres, left_index=True, right_on="movieId")
 
 
 class recommendations(Resource):
@@ -426,6 +445,7 @@ class recommendations(Resource):
 
         try:
             recommendations = find_similar_movies(movie_id)
+            print('5')
             print("recommendations: ", recommendations)
 
             # Fetch TMDB data for each recommended movie
@@ -434,6 +454,8 @@ class recommendations(Resource):
                 if tmdb_data:
                     recommendations.loc[recommendations['title'] ==
                                         row['title'], 'tmdb_data'] = str(tmdb_data)
+                
+            print("Before JSON")
 
             return jsonify(recommendations.to_dict(orient='records'))
         except Exception as e:

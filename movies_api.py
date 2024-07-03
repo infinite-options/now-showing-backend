@@ -667,7 +667,6 @@ class lines(Resource):
 
 api.add_resource(recommendations, '/api/v2/recommendations')
 
-
 api.add_resource(movies, '/api/v2/movies')
 api.add_resource(girls, '/api/v2/girls')
 api.add_resource(villains, '/api/v2/villains')
