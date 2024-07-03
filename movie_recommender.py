@@ -26,7 +26,6 @@ rec_num = 10
 # TMDB API key
 API_KEY = "b8b76ccfa61c6e85ca7e096d905a7d63"
 
-
 def fetch_tmdb_data(movie_title):
     search_url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={movie_title}"
     response = requests.get(search_url)
@@ -79,6 +78,7 @@ def find_similar_movies(movie_id):
 
 @app.route('/recommend', methods=['POST'])
 def get_recommendations():
+    print("In recommendations")
     data = request.json
     movie_id = data.get('movie_id')
     if not movie_id:
