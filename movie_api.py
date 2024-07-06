@@ -322,15 +322,14 @@ genres = pd.read_csv('s3://now-showing/movies_genres.csv')
 ratings = pd.read_csv('s3://now-showing/movies_ratings.csv')
 movie_id = 1  # default movie choice
 
-# TMDB API key
-API_KEY = "b8b76ccfa61c6e85ca7e096d905a7d63"
-
 
 # Global variables
 rec_num = 10
 
 # TMDB API key
+API_KEY = os.getenv('TMDB_API_KEY')
 API_KEY = "b8b76ccfa61c6e85ca7e096d905a7d63"
+
 
 def fetch_tmdb_data(movie_title):
     print("Ietch_tmdb_data ", movie_title )
@@ -404,10 +403,10 @@ def find_similar_movies(movie_id):
     return rec_percentages.head(rec_num).merge(genres, left_index=True, right_on="movieId")
 
 
-class recommendations(Resource):
-    print("In endpoint")
+class similar_recs(Resource):
+    # print("In test endpoint")
     def get(self):
-        print("in recommendations GET Movies")
+        print("in similar recommendations GET Movies")
         movies_response = {}
 
         try:
@@ -434,7 +433,7 @@ class recommendations(Resource):
 
 
     def post(self):
-        print("Here")
+        print("in similar recommendations POST Movies")
         # @app.route('/recommend', methods=['POST'])
         # def get_recommendations():
         print("In recommendations POST")
@@ -466,15 +465,9 @@ class recommendations(Resource):
 
 
 def clean_movie_datasets():
-# genres = pd.read_csv('s3://now-showing/movies_genres.csv')
-# ratings = pd.read_csv('s3://now-showing/movies_ratings.csv')
-
-# movies = pd.read_csv('s3://now-showing/movies_genres.csv')
-# ratings = pd.read_csv('s3://now-showing/movies_ratings.csv')
-
-# Preprocess the dataset
-# Remove movies that do not have any genres listed from both movies and ratings dataset
-# movies = movies[movies['genres'] != '(no genres listed)']
+    # Preprocess the dataset
+    # Remove movies that do not have any genres listed from both movies and ratings dataset
+    # movies = movies[movies['genres'] != '(no genres listed)']
     genres_cleaned = genres[genres['genres'] != '(none)']
 
     unique_movie_ids = genres_cleaned['movieId'].unique()
@@ -514,7 +507,7 @@ def clean_movie_datasets():
 
 
 
-class Profile_recs(Resource):
+class profile_recs(Resource):
     def post(self):
         print("In Profile Recommendation endpoint")
 # @app.route('/recommend', methods=['POST'])
@@ -577,202 +570,6 @@ class Profile_recs(Resource):
 
 
 
-#  -- BOND RELATED FUNCTIONS     -----------------------------------------
-
-# SELECT MOVIES
-class movies(Resource):
-    def get(self):
-        print("in Movies")
-        movies_response = {}
-
-        try:
-            conn = connect()
-
-            query = """
-                SELECT * 
-                FROM bond.movies
-                LEFT JOIN bond.girls
-                    ON movie_uid = girl_movie_uid
-                LEFT JOIN bond.songs
-                    ON movie_uid = song_movie_uid;
-            """
-
-            movies = execute(query, 'get', conn)
-
-            movies_response = movies['result']
-
-            return(movies_response)
-        except:
-            print("Movies Endpoint Failed")
-        finally:
-            disconnect(conn)
-
-# SELECT MOVIES TITLES
-class movietitles(Resource):
-    def get(self):
-        print("in Movies")
-        movies_response = {}
-
-        try:
-            conn = connect()
-
-            query = """
-                SELECT movie_order, movie_title
-                FROM bond.movies;
-            """
-
-            movies = execute(query, 'get', conn)
-
-            movies_response = movies['result']
-
-            return(movies_response)
-        except:
-            print("Movies Endpoint Failed")
-        finally:
-            disconnect(conn)
-
-
-# SELECT BOND GIRLS
-class girls(Resource):
-    def get(self):
-        print("in Movies")
-        girls_response = {}
-
-        try:
-            conn = connect()
-
-            query = """
-                SELECT * 
-                FROM bond.girls
-                LEFT JOIN bond.movies
-                    ON movie_uid = girl_movie_uid;
-            """
-
-            girls = execute(query, 'get', conn)
-
-            girls_response = girls['result']
-
-            return(girls_response)
-        except:
-            print("Movies Endpoint Failed")
-        finally:
-            disconnect(conn)
-
-
-# SELECT BOND VILLAINS
-class villains(Resource):
-    def get(self):
-        print("in Movies")
-        villains_response = {}
-
-        try:
-            conn = connect()
-
-            query = """
-                SELECT * 
-                FROM bond.villains
-                LEFT JOIN bond.movies
-                    ON movie_uid = villain_movie_uid;
-            """
-
-            villains = execute(query, 'get', conn)
-
-            villains_response = villains['result']
-
-            return(villains_response)
-        except:
-            print("Movies Endpoint Failed")
-        finally:
-            disconnect(conn)
-
-
-# SELECT BOND SIDEKICKS
-class sidekicks(Resource):
-    def get(self):
-        print("in Movies")
-        sidekicks_response = {}
-
-        try:
-            conn = connect()
-
-            query = """
-                SELECT * 
-                FROM bond.movies
-                LEFT JOIN bond.villains
-                    ON movie_uid = villain_movie_uid
-                LEFT JOIN bond.sidekicks
-                    ON movie_uid = sidekick_movie_uid
-                WHERE sidekick IS NOT NULL;
-            """
-
-            # Query Response
-            sidekicks = execute(query, 'get', conn)
-            # print(sidekicks)
-            sidekicks_response = sidekicks['result']
-            # print(sidekicks_response)
-
-            return(sidekicks_response)
-        except:
-            print("Movies Endpoint Failed")
-        finally:
-            disconnect(conn)
-
-
-# SELECT BOND SONGS
-class songs(Resource):
-    def get(self):
-        print("in Movies")
-        songs_response = {}
-
-        try:
-            conn = connect()
-
-            query = """
-                SELECT * 
-                FROM bond.songs
-                LEFT JOIN bond.movies
-                    ON movie_uid = song_movie_uid;
-            """
-
-            songs = execute(query, 'get', conn)
-
-            songs_response = songs['result']
-
-            return(songs_response)
-        except:
-            print("Movies Endpoint Failed")
-        finally:
-            disconnect(conn)
-
-# SELECT BOND LINES
-class lines(Resource):
-    def get(self):
-        print("in Lines")
-        girls_response = {}
-
-        try:
-            conn = connect()
-
-            query = """
-                SELECT * 
-                FROM bond.lines
-                LEFT JOIN bond.movies
-                    ON movie_uid = line_movie_id;
-            """
-
-            lines = execute(query, 'get', conn)
-
-            lines_response = lines['result']
-
-            return(lines_response)
-        except:
-            print("Movies Endpoint Failed")
-        finally:
-            disconnect(conn)
-
-
-
-
 
 
 #  -- ACTUAL ENDPOINTS    -----------------------------------------
@@ -785,16 +582,8 @@ class lines(Resource):
 # Make sure port number is unused (i.e. don't use numbers 0-1023)
 
 # GET requests
-api.add_resource(movies, '/api/v2/movies')
-api.add_resource(girls, '/api/v2/girls')
-api.add_resource(villains, '/api/v2/villains')
-api.add_resource(sidekicks, '/api/v2/sidekicks')
-api.add_resource(songs, '/api/v2/songs')
-api.add_resource(movietitles, '/api/v2/movietitles')
-api.add_resource(lines, '/api/v2/lines')
-
-api.add_resource(recommendations, '/api/v2/recommendations')
-api.add_resource(Profile_recs, '/api/v2/profile')
+api.add_resource(similar_recs, '/api/v2/similar')
+api.add_resource(profile_recs, '/api/v2/profile')
 
 
 
