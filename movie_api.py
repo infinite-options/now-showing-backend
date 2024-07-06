@@ -332,7 +332,7 @@ API_KEY = "b8b76ccfa61c6e85ca7e096d905a7d63"
 
 
 def fetch_tmdb_data(movie_title):
-    print("Ietch_tmdb_data ", movie_title )
+    print("In fetch_tmdb_data ", movie_title )
     search_url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={movie_title}"
     response = requests.get(search_url)
     search_data = response.json()
@@ -359,33 +359,30 @@ def fetch_tmdb_data(movie_title):
 
 
 def find_similar_movies(movie_id):
-    print("In find_similar_movies ", movie_id)
-    print(ratings[ratings["movieId"] == movie_id])
-    print(ratings[(ratings["movieId"] == movie_id) & (
-        ratings["rating"] > 4)])
+    # print("In find_similar_movies ", movie_id)
+    # print(ratings[ratings["movieId"] == movie_id])
+    # print(ratings[(ratings["movieId"] == movie_id) & (
+    #     ratings["rating"] > 4)])
 
     # Find Other Users who liked the same movie
     similar_users = ratings[(ratings["movieId"] == movie_id) & (
         ratings["rating"] > 4)]["userId"].unique()
-    print("Similar Users: ", similar_users)
+    # print("Similar Users: ", similar_users)
 
     # Find Other Movies that the Similar Users Liked
     similar_user_recs = ratings[(ratings["userId"].isin(
         similar_users)) & (ratings["rating"] > 4)]["movieId"]
-    print("Similar Users Recommendations: ", similar_user_recs)
+    # print("Similar Users Recommendations: ", similar_user_recs)
 
-    print('1')
     similar_user_recs = similar_user_recs.value_counts() / len(similar_users)
     similar_user_recs = similar_user_recs[similar_user_recs > .1]
 
-    print('2')
 
     all_users = ratings[(ratings["movieId"].isin(
         similar_user_recs.index)) & (ratings["rating"] > 4)]
     all_user_recs = all_users["movieId"].value_counts(
     ) / len(all_users["userId"].unique())
 
-    print('3')
 
     rec_percentages = pd.concat([similar_user_recs, all_user_recs], axis=1)
     rec_percentages.columns = ["similar", "all"]
@@ -394,11 +391,10 @@ def find_similar_movies(movie_id):
         rec_percentages["all"]
     rec_percentages = rec_percentages.sort_values("score", ascending=False)
 
-    print('4')
-    print(rec_percentages.head(rec_num))
-    print('4.5')
-    print(genres[genres['movieId'] == movie_id])
-    print(rec_percentages.head(rec_num).merge(genres, left_index=True, right_on="movieId"))
+
+    # print(rec_percentages.head(rec_num))
+    # print(genres[genres['movieId'] == movie_id])
+    # print(rec_percentages.head(rec_num).merge(genres, left_index=True, right_on="movieId"))
 
     return rec_percentages.head(rec_num).merge(genres, left_index=True, right_on="movieId")
 
@@ -436,17 +432,15 @@ class similar_recs(Resource):
         print("in similar recommendations POST Movies")
         # @app.route('/recommend', methods=['POST'])
         # def get_recommendations():
-        print("In recommendations POST")
         data = request.json
         movie_id = data.get('movie_id')
-        print("Movie ID: ", movie_id)
+        # print("Movie ID: ", movie_id)
         if not movie_id:
             return jsonify({"error": "No movie ID provided"}), 400
 
         try:
             recommendations = find_similar_movies(movie_id)
-            print('5')
-            print("recommendations: ", recommendations)
+            # print("recommendations: ", recommendations)
 
             # Fetch TMDB data for each recommended movie
             for _, row in recommendations.iterrows():
@@ -455,7 +449,7 @@ class similar_recs(Resource):
                     recommendations.loc[recommendations['title'] ==
                                         row['title'], 'tmdb_data'] = str(tmdb_data)
                 
-            print("Before JSON")
+            # print("Before JSON")
 
             return jsonify(recommendations.to_dict(orient='records'))
         except Exception as e:
@@ -522,8 +516,8 @@ class profile_recs(Resource):
         # Collaborative filtering using rating
         user_item_matrix = ratings_cleaned.pivot_table(columns='userId', index='movieId', values='rating').fillna(0)
 
-        print("User ratings: ")
-        print(user_ratings)
+        # print("User ratings: ")
+        # print(user_ratings)
         # Create a new user with these ratings
         user_item_matrix['new_user'] = 0
         for movie_id, rating in user_ratings.items():
