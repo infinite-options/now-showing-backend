@@ -12,11 +12,8 @@ from flask_cors import CORS
 
 import boto3
 import os.path
-
-from googleapiclient.discovery import build
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
 from urllib.parse import urlparse
+from fuzzywuzzy import process
 import urllib.request
 import base64
 from oauth2client import GOOGLE_REVOKE_URI, GOOGLE_TOKEN_URI, client
@@ -500,6 +497,9 @@ def clean_movie_datasets():
     return(genres_cleaned, ratings_cleaned)
 
 
+# Call Cleaning Function
+genres_cleaned, ratings_cleaned = clean_movie_datasets()
+
 
 class profile_recs(Resource):
     def post(self):
@@ -509,9 +509,6 @@ class profile_recs(Resource):
         data = dict(request.json)
         # Read and cast the movie ratings dictionary
         user_ratings = {int(k): float(v) for k, v in data['ratings'].items()}
-
-        # Call Cleaning Function
-        genres_cleaned, ratings_cleaned = clean_movie_datasets()
 
         # Collaborative filtering using rating
         user_item_matrix = ratings_cleaned.pivot_table(columns='userId', index='movieId', values='rating').fillna(0)
@@ -560,6 +557,34 @@ class profile_recs(Resource):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
+    def find_movie_title(self):
+        data = request.get_json()
+        movie_title = data.get('title')
+
+        # # Check if the exact title exists
+        # exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == movie_title.lower()]
+        #
+        # data = request.get_json()
+        # movie_title = data.get('title')
+
+        # Check for exact match
+        exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == movie_title.lower()]
+        if not exact_match.empty:
+            result = {
+                'title': exact_match['title'].values[0],
+                'movieID': exact_match['movieID'].values[0]
+            }
+            return jsonify({'exact_match': result})
+
+        # Find the top 5 matching movie titles
+        matches = process.extract(movie_title, genres_cleaned['title'], limit=5)
+        top_5_titles = [
+            {'title': match[0], 'movieID': genres_cleaned[genres_cleaned['title'] == match[0]]['movieID'].values[0]}
+            for match in matches
+        ]
+
+        return jsonify({'matches': top_5_titles})
+
 
 
 
@@ -578,6 +603,7 @@ class profile_recs(Resource):
 # GET requests
 api.add_resource(similar_recs, '/api/v2/similar')
 api.add_resource(profile_recs, '/api/v2/profile')
+api.add_resource(profile_recs, '/api/v2/profile/findMovieTitle')
 
 
 
