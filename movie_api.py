@@ -568,7 +568,7 @@ class find_movie_title(Resource):
         if not exact_match.empty:
             result = {
                 'title': exact_match['title'].values[0],
-                'movieId': exact_match['movieId'].values[0]
+                'movieId': int(exact_match['movieId'].values[0])
             }
             return jsonify({'exact_match': result})
 
