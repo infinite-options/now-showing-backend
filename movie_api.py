@@ -557,38 +557,29 @@ class profile_recs(Resource):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    def find_movie_title(self):
+
+class find_movie_title(Resource):
+    def post(self):
         data = request.get_json()
         movie_title = data.get('title')
-
-        # # Check if the exact title exists
-        # exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == movie_title.lower()]
-        #
-        # data = request.get_json()
-        # movie_title = data.get('title')
 
         # Check for exact match
         exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == movie_title.lower()]
         if not exact_match.empty:
             result = {
                 'title': exact_match['title'].values[0],
-                'movieID': exact_match['movieID'].values[0]
+                'movieId': exact_match['movieId'].values[0]
             }
             return jsonify({'exact_match': result})
 
         # Find the top 5 matching movie titles
         matches = process.extract(movie_title, genres_cleaned['title'], limit=5)
         top_5_titles = [
-            {'title': match[0], 'movieID': genres_cleaned[genres_cleaned['title'] == match[0]]['movieID'].values[0]}
+            {'title': match[0], 'movieId': int(genres_cleaned[genres_cleaned['title'] == match[0]]['movieId'].values[0])}
             for match in matches
         ]
 
         return jsonify({'matches': top_5_titles})
-
-
-
-
-
 
 
 #  -- ACTUAL ENDPOINTS    -----------------------------------------
@@ -603,8 +594,7 @@ class profile_recs(Resource):
 # GET requests
 api.add_resource(similar_recs, '/api/v2/similar')
 api.add_resource(profile_recs, '/api/v2/profile')
-api.add_resource(profile_recs, '/api/v2/profile/findMovieTitle')
-
+api.add_resource(find_movie_title, '/api/v2/findMovieTitle')
 
 
 if __name__ == '__main__':
