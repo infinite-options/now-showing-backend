@@ -315,9 +315,17 @@ def helper_icon_img(url):
 
 # MOVIE RECOMMENDATIONS
 
-genres = pd.read_csv('s3://now-showing/movies_genres.csv')
-ratings = pd.read_csv('s3://now-showing/movies_ratings.csv')
+# genres = pd.read_csv('s3://now-showing/movies_genres.csv')
+# ratings = pd.read_csv('s3://now-showing/movies_ratings.csv')
 movie_id = 1  # default movie choice
+genres = pd.read_parquet('s3://now-showing/genres.parquet')
+ratings = pd.read_parquet('s3://now-showing/ratings.parquet')
+
+# CLOUDFRONT_GENRES_URL = "https://d1wcdph8maao8x.cloudfront.net/now-showing/genres.parquet"
+# CLOUDFRONT_RATINGS_URL = "https://d1wcdph8maao8x.cloudfront.net/now-showing/ratings.parquet"
+
+# genres = pd.read_parquet(requests.get(CLOUDFRONT_GENRES_URL))
+# ratings = pd.read_parquet(requests.get(CLOUDFRONT_RATINGS_URL))
 
 
 # Global variables
@@ -455,135 +463,144 @@ class similar_recs(Resource):
 # -- ---------------------------------------------------------------------
 
 
-def clean_movie_datasets():
-    # Preprocess the dataset
-    # Remove movies that do not have any genres listed from both movies and ratings dataset
-    # movies = movies[movies['genres'] != '(no genres listed)']
-    genres_cleaned = genres[genres['genres'] != '(none)']
+# def clean_movie_datasets():
+#     # Preprocess the dataset
+#     # Remove movies that do not have any genres listed from both movies and ratings dataset
+#     # movies = movies[movies['genres'] != '(no genres listed)']
+#     genres_cleaned = genres[genres['genres'] != '(none)']
 
-    unique_movie_ids = genres_cleaned['movieId'].unique()
-    ratings_cleaned = ratings[ratings['movieId'].isin(unique_movie_ids)]
+#     unique_movie_ids = genres_cleaned['movieId'].unique()
+#     ratings_cleaned = ratings[ratings['movieId'].isin(unique_movie_ids)]
 
-    # Remove users from the ratings dataset who have rated <= 200 movies
-    above_threshold_users = ratings_cleaned['userId'].value_counts() > 200
-    above_threshold_user_indices = above_threshold_users[above_threshold_users].index
-    ratings_cleaned = ratings_cleaned[ratings_cleaned['userId'].isin(above_threshold_user_indices)]
+#     # Remove users from the ratings dataset who have rated <= 200 movies
+#     above_threshold_users = ratings_cleaned['userId'].value_counts() > 200
+#     above_threshold_user_indices = above_threshold_users[above_threshold_users].index
+#     ratings_cleaned = ratings_cleaned[ratings_cleaned['userId'].isin(above_threshold_user_indices)]
 
-    # merge the ratings and movies dataset
-    ratings_with_genres = ratings_cleaned.merge(genres_cleaned, on='movieId')
-    # Count the number of ratings received by each movie
-    num_rating = ratings_with_genres.groupby('title')['rating'].count().reset_index()
-    num_rating.rename(columns={
-        'rating': 'num_of_rating'
-    }, inplace=True)
+#     # merge the ratings and movies dataset
+#     ratings_with_genres = ratings_cleaned.merge(genres_cleaned, on='movieId')
+#     # Count the number of ratings received by each movie
+#     num_rating = ratings_with_genres.groupby('title')['rating'].count().reset_index()
+#     num_rating.rename(columns={
+#         'rating': 'num_of_rating'
+#     }, inplace=True)
 
-    # Remove the movies that have less than 50 ratings
-    num_rating = num_rating[num_rating['num_of_rating'] >= 50]
-    ratings_with_genres = ratings_with_genres.merge(num_rating, on='title')
-    ratings_with_genres.drop_duplicates(['userId', 'movieId'], inplace=True)
+#     # Remove the movies that have less than 50 ratings
+#     num_rating = num_rating[num_rating['num_of_rating'] >= 50]
+#     ratings_with_genres = ratings_with_genres.merge(num_rating, on='title')
+#     ratings_with_genres.drop_duplicates(['userId', 'movieId'], inplace=True)
 
-    # Find the unique movieIds in the merged dataset
-    unique_movie_ids = ratings_with_genres['movieId'].unique()
+#     # Find the unique movieIds in the merged dataset
+#     unique_movie_ids = ratings_with_genres['movieId'].unique()
 
-    # Keep only unique_movie_ids in the movies and ratings dataset
-    genres_cleaned = genres_cleaned[genres_cleaned['movieId'].isin(unique_movie_ids)]
-    ratings_cleaned = ratings_cleaned[ratings_cleaned['movieId'].isin(unique_movie_ids)]
+#     # Keep only unique_movie_ids in the movies and ratings dataset
+#     genres_cleaned = genres_cleaned[genres_cleaned['movieId'].isin(unique_movie_ids)]
+#     ratings_cleaned = ratings_cleaned[ratings_cleaned['movieId'].isin(unique_movie_ids)]
 
-    # Sort the datasets by movieId
-    genres_cleaned.sort_values('movieId')
-    ratings_cleaned.sort_values('movieId')
-    ratings_with_genres.sort_values('movieId')
+#     # Sort the datasets by movieId
+#     genres_cleaned.sort_values('movieId')
+#     ratings_cleaned.sort_values('movieId')
+#     ratings_with_genres.sort_values('movieId')
 
-    return(genres_cleaned, ratings_cleaned)
+#     return(genres_cleaned, ratings_cleaned)
 
 
 # Call Cleaning Function
-genres_cleaned, ratings_cleaned = clean_movie_datasets()
+# genres_cleaned, ratings_cleaned = clean_movie_datasets()
 
 
-class profile_recs(Resource):
-    def post(self):
-        print("In Profile Recommendation endpoint")
-# @app.route('/recommend', methods=['POST'])
-# def recommend():
-        data = dict(request.json)
-        # Read and cast the movie ratings dictionary
-        user_ratings = {int(k): float(v) for k, v in data['ratings'].items()}
+# class profile_recs(Resource):
+#     def post(self):
+#         print("In Profile Recommendation endpoint")
+# # @app.route('/recommend', methods=['POST'])
+# # def recommend():
+#         data = dict(request.json)
+#         # Read and cast the movie ratings dictionary
+#         user_ratings = {int(k): float(v) for k, v in data['ratings'].items()}
 
-        # Collaborative filtering using rating
-        user_item_matrix = ratings_cleaned.pivot_table(columns='userId', index='movieId', values='rating').fillna(0)
+#         # Collaborative filtering using rating
+#         user_item_matrix = ratings_cleaned.pivot_table(columns='userId', index='movieId', values='rating').fillna(0)
 
-        # print("User ratings: ")
-        # print(user_ratings)
-        # Create a new user with these ratings
-        user_item_matrix['new_user'] = 0
-        for movie_id, rating in user_ratings.items():
-            if movie_id in user_item_matrix.index:
-                user_item_matrix.at[movie_id, 'new_user'] = rating
+#         # print("User ratings: ")
+#         # print(user_ratings)
+#         # Create a new user with these ratings
+#         user_item_matrix['new_user'] = 0
+#         for movie_id, rating in user_ratings.items():
+#             if movie_id in user_item_matrix.index:
+#                 user_item_matrix.at[movie_id, 'new_user'] = rating
 
-        # Fit the Nearest Neighbors model
-        model = NearestNeighbors(metric='cosine', algorithm='brute')
-        model.fit(user_item_matrix.T)
+#         # Fit the Nearest Neighbors model
+#         model = NearestNeighbors(metric='cosine', algorithm='brute')
+#         model.fit(user_item_matrix.T)
 
-        # Find the nearest neighbors for the new user
-        distances, indices = model.kneighbors([user_item_matrix.T.loc['new_user']], n_neighbors=5)
+#         # Find the nearest neighbors for the new user
+#         distances, indices = model.kneighbors([user_item_matrix.T.loc['new_user']], n_neighbors=5)
 
-        # Get the indices of similar users
-        similar_user_ids = user_item_matrix.columns[indices.flatten()]
-        similar_user_ids = similar_user_ids.drop('new_user')
+#         # Get the indices of similar users
+#         similar_user_ids = user_item_matrix.columns[indices.flatten()]
+#         similar_user_ids = similar_user_ids.drop('new_user')
 
-        # Aggregate ratings of similar users for recommendation
-        similar_users_ratings = user_item_matrix[similar_user_ids].mean(axis=1)
+#         # Aggregate ratings of similar users for recommendation
+#         similar_users_ratings = user_item_matrix[similar_user_ids].mean(axis=1)
 
-        # Filter out movies already rated by the new user
-        unseen_movies_ratings = similar_users_ratings.drop(index=user_ratings.keys())
+#         # Filter out movies already rated by the new user
+#         unseen_movies_ratings = similar_users_ratings.drop(index=user_ratings.keys())
 
-        # Recommend top 10 movies
-        recommended_movies = unseen_movies_ratings.sort_values(ascending=False).head(10)
-        recommended_movie_ids = recommended_movies.index
-        recommended_movie_details = genres_cleaned[genres_cleaned['movieId'].isin(recommended_movie_ids)]
+#         # Recommend top 10 movies
+#         recommended_movies = unseen_movies_ratings.sort_values(ascending=False).head(10)
+#         recommended_movie_ids = recommended_movies.index
+#         recommended_movie_details = genres_cleaned[genres_cleaned['movieId'].isin(recommended_movie_ids)]
 
-        # Calculate the average rating for each movie
-        average_ratings = ratings.groupby('movieId')['rating'].mean()
+#         # Calculate the average rating for each movie
+#         average_ratings = ratings.groupby('movieId')['rating'].mean()
 
-        recommended_movie_details = recommended_movie_details.merge(average_ratings, on='movieId')
-        recommended_movie_details.rename(columns={
-            'rating': 'avg_rating'
-        }, inplace=True)
-        recommendations = recommended_movie_details[['movieId', 'title', 'genres', 'avg_rating']]
+#         recommended_movie_details = recommended_movie_details.merge(average_ratings, on='movieId')
+#         recommended_movie_details.rename(columns={
+#             'rating': 'avg_rating'
+#         }, inplace=True)
+#         recommendations = recommended_movie_details[['movieId', 'title', 'genres', 'avg_rating']]
 
-        try:
-            return jsonify(recommendations.to_dict(orient='records'))
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+#         try:
+#             return jsonify(recommendations.to_dict(orient='records'))
+#         except Exception as e:
+#             return jsonify({"error": str(e)}), 500
+        
 
-    def find_movie_title(self):
-        data = request.get_json()
-        movie_title = data.get('title')
+# class findMovieTitle(Resource):
+#     def post(self):
+#         # data = request.get_json()
+#         data = dict(request.json)
+#         movie_title = data.get('title')
+#         print(movie_title)
 
-        # # Check if the exact title exists
-        # exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == movie_title.lower()]
-        #
-        # data = request.get_json()
-        # movie_title = data.get('title')
+#         # # Check if the exact title exists
+#         # exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == movie_title.lower()]
+#         #
+#         # data = request.get_json()
+#         # movie_title = data.get('title')
 
-        # Check for exact match
-        exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == movie_title.lower()]
-        if not exact_match.empty:
-            result = {
-                'title': exact_match['title'].values[0],
-                'movieID': exact_match['movieID'].values[0]
-            }
-            return jsonify({'exact_match': result})
+#         # Check for exact match
+#         exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == movie_title.lower()]
+#         print(exact_match)
+#         if not exact_match.empty:
+#             result = {
+#                 'title': exact_match['title'].values[0],
+#                 'movieId': exact_match['movieId'].values[0]
+#             }
+#             return jsonify({'exact_match': result})
 
-        # Find the top 5 matching movie titles
-        matches = process.extract(movie_title, genres_cleaned['title'], limit=5)
-        top_5_titles = [
-            {'title': match[0], 'movieID': genres_cleaned[genres_cleaned['title'] == match[0]]['movieID'].values[0]}
-            for match in matches
-        ]
+#         # Find the top 5 matching movie titles
+#         matches = process.extract(movie_title, genres_cleaned['title'], limit=5)
+#         print(matches)
+#         top_5_titles = [
+#             {'title': match[0], 'movieId': genres_cleaned[genres_cleaned['title'] == match[0]]['movieId'].values[0]}
+#             for match in matches
+#         ]
+#         print("top 5 titles: ", top_5_titles)
+#         print({'matches': top_5_titles})
+#         print(jsonify({'matches': top_5_titles}))
 
-        return jsonify({'matches': top_5_titles})
+#         return jsonify({'matches': top_5_titles})
 
 
 
@@ -602,8 +619,8 @@ class profile_recs(Resource):
 
 # GET requests
 api.add_resource(similar_recs, '/api/v2/similar')
-api.add_resource(profile_recs, '/api/v2/profile')
-api.add_resource(profile_recs, '/api/v2/profile/findMovieTitle')
+# api.add_resource(profile_recs, '/api/v2/profile')
+# api.add_resource(findMovieTitle, '/api/v2/findMovieTitle')
 
 
 
