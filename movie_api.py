@@ -359,12 +359,12 @@ class chunk_test(Resource):
 
             # Define the bucket name and object key
             s3_bucket_name = 'now-showing'
-            # s3_file_key = 'movies_genres.csv'
-            s3_file_key = 'movies_ratings.csv'
+            s3_file_key = 'movies_genres.csv'
+            # s3_file_key = 'movies_ratings.csv'
 
             # Get the object from S3
             response = s3.get_object(Bucket=s3_bucket_name, Key=s3_file_key)
-            # print("Chunk Response: ", response)
+            print("Chunk Response: ", response)
 
             # Read the object's content into memory
             csv_data = response['Body'].read().decode('utf-8')
@@ -384,15 +384,15 @@ class chunk_test(Resource):
             i = 0
             # # Process each chunk
             for chunk in chunk_iterator:
-                i =+ 1
+                i = i + 1
             #     # Perform operations on each chunk
             #     # print(chunk)
-            #     print(i, chunk[8:13])
+                # print(i)
             #     # Example operation: append chunk to a list
             #     # processed_chunks.append(chunk)
 
             print(chunk)
-            print(i)
+            print("i = ", i)
             # return(chunk_iterator[0:5])
             return("All done")
         except:
