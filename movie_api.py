@@ -386,7 +386,7 @@ class chunk_test(Resource):
             for chunk in chunk_iterator:
                 i = i + 1
             #     # Perform operations on each chunk
-            #     # print(chunk)
+                print(chunk)
                 # print(i)
             #     # Example operation: append chunk to a list
             #     # processed_chunks.append(chunk)
