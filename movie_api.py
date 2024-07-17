@@ -459,31 +459,26 @@ def clean_movie_datasets():
     # Preprocess the dataset
     # Remove movies that do not have any genres listed from both movies and ratings dataset
     # movies = movies[movies['genres'] != '(no genres listed)']
-    genres_cleaned = genres[genres['genres'] != '(none)']
-
-    unique_movie_ids = genres_cleaned['movieId'].unique()
-    ratings_cleaned = ratings[ratings['movieId'].isin(unique_movie_ids)]
+    genres_cleaned = genres[genres['genres'] != '(no genres listed)']
 
     # Remove users from the ratings dataset who have rated <= 200 movies
-    above_threshold_users = ratings_cleaned['userId'].value_counts() > 200
+    above_threshold_users = ratings['userId'].value_counts() > 200
     above_threshold_user_indices = above_threshold_users[above_threshold_users].index
-    ratings_cleaned = ratings_cleaned[ratings_cleaned['userId'].isin(above_threshold_user_indices)]
+    ratings_cleaned = ratings[ratings['userId'].isin(above_threshold_user_indices)]
 
-    # merge the ratings and movies dataset
-    ratings_with_genres = ratings_cleaned.merge(genres_cleaned, on='movieId')
     # Count the number of ratings received by each movie
-    num_rating = ratings_with_genres.groupby('title')['rating'].count().reset_index()
+    num_rating = ratings_cleaned.groupby('movieId')['rating'].count().reset_index()
     num_rating.rename(columns={
         'rating': 'num_of_rating'
     }, inplace=True)
 
     # Remove the movies that have less than 50 ratings
     num_rating = num_rating[num_rating['num_of_rating'] >= 50]
-    ratings_with_genres = ratings_with_genres.merge(num_rating, on='title')
-    ratings_with_genres.drop_duplicates(['userId', 'movieId'], inplace=True)
+    ratings_cleaned = ratings_cleaned.merge(num_rating, on='title')
+    ratings_cleaned.drop_duplicates(['userId', 'movieId'], inplace=True)
 
     # Find the unique movieIds in the merged dataset
-    unique_movie_ids = ratings_with_genres['movieId'].unique()
+    unique_movie_ids = ratings_cleaned['movieId'].unique()
 
     # Keep only unique_movie_ids in the movies and ratings dataset
     genres_cleaned = genres_cleaned[genres_cleaned['movieId'].isin(unique_movie_ids)]
@@ -492,7 +487,6 @@ def clean_movie_datasets():
     # Sort the datasets by movieId
     genres_cleaned.sort_values('movieId')
     ratings_cleaned.sort_values('movieId')
-    ratings_with_genres.sort_values('movieId')
 
     return(genres_cleaned, ratings_cleaned)
 
