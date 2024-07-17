@@ -474,7 +474,7 @@ def clean_movie_datasets():
 
     # Remove the movies that have less than 50 ratings
     num_rating = num_rating[num_rating['num_of_rating'] >= 50]
-    ratings_cleaned = ratings_cleaned.merge(num_rating, on='title')
+    ratings_cleaned = ratings_cleaned.merge(num_rating, on='movieId')
     ratings_cleaned.drop_duplicates(['userId', 'movieId'], inplace=True)
 
     # Find the unique movieIds in the merged dataset
@@ -488,7 +488,7 @@ def clean_movie_datasets():
     genres_cleaned.sort_values('movieId')
     ratings_cleaned.sort_values('movieId')
 
-    return(genres_cleaned, ratings_cleaned)
+    return genres_cleaned, ratings_cleaned
 
 
 # Call Cleaning Function
