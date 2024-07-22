@@ -1,30 +1,41 @@
+import dask.dataframe as dd
+import pyarrow.parquet as pq
 import pandas as pd
 import numpy as np
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import boto3
 from flask import Flask, request, jsonify
 import requests
+from fuzzywuzzy import process
 
 app = Flask(__name__)
 
 client = boto3.client("s3")
 
-movies = pd.read_csv('s3://now-showing/movies_genres.csv')
-ratings = pd.read_csv('s3://now-showing/movies_ratings.csv')
-movie_id = 1  # default movie choice
+# Function to read Parquet files in chunks
 
+
+def read_parquet_in_chunks(file_path, chunksize=100000):
+    dataset = pq.ParquetDataset(file_path)
+    table = dataset.read()
+    num_rows = table.num_rows
+
+    for i in range(0, num_rows, chunksize):
+        chunk = table.slice(i, chunksize).to_pandas()
+        yield chunk
+
+
+# Read Parquet files in chunks
+movies = pd.concat(read_parquet_in_chunks('s3://now-showing/genres.parquet'))
+ratings = pd.concat(read_parquet_in_chunks('s3://now-showing/ratings.parquet'))
 
 # TMDB API key
 API_KEY = "b8b76ccfa61c6e85ca7e096d905a7d63"
-
 
 # Global variables
+movie_id = 1  # default movie choice
 rec_num = 10
-
-# TMDB API key
-API_KEY = "b8b76ccfa61c6e85ca7e096d905a7d63"
 
 
 def fetch_tmdb_data(movie_title):
@@ -76,6 +87,8 @@ def find_similar_movies(movie_id):
 
     return rec_percentages.head(rec_num).merge(movies, left_index=True, right_on="movieId")
 
+# ENDPOINTS
+
 
 @app.route('/recommend', methods=['POST'])
 def get_recommendations():
@@ -102,6 +115,43 @@ def get_recommendations():
 @app.route('/movies', methods=['GET'])
 def get_movies_list():
     return jsonify(movies[['movieId', 'title']].to_dict(orient='records'))
+
+
+@app.route('/recommend_by_name', methods=['POST'])
+def get_recommendations_by_name():
+    data = request.json
+    movie_name = data.get('movie_name')
+    if not movie_name:
+        return jsonify({"error": "No movie name provided"}), 400
+
+    try:
+        # Find matching movies
+        matching_movies = movies[movies['title'].str.contains(
+            movie_name, case=False, na=False)]
+
+        if matching_movies.empty:
+            return jsonify({"error": f"No movies found matching '{movie_name}'"}), 404
+
+        # If multiple matches, use the first one
+        matched_movie = matching_movies.iloc[0]
+        movie_id = matched_movie['movieId']
+
+        recommendations = find_similar_movies(movie_id)
+
+        # Fetch TMDB data for each recommended movie
+        for _, row in recommendations.iterrows():
+            tmdb_data = fetch_tmdb_data(row['title'])
+            if tmdb_data:
+                recommendations.loc[recommendations['title'] ==
+                                    row['title'], 'tmdb_data'] = str(tmdb_data)
+
+        return jsonify({
+            "matched_movies": matching_movies[['movieId', 'title']].to_dict(orient='records'),
+            "used_for_recommendations": matched_movie.to_dict(),
+            "recommendations": recommendations.to_dict(orient='records')
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/movie/<int:movie_id>', methods=['GET'])
