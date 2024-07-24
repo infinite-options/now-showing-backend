@@ -301,18 +301,18 @@ s3_file_key_ratings = os.getenv('S3_PATH_KEY_RATINGS')
 s3_file_key_genres = os.getenv('S3_PATH_KEY_GENRES')
 
 s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
-print("after s3 connect")
+# print("after s3 connect")
 
 genres_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_genres)
-print("the response of the S3", genres_response)
-print()
+# print("the response of the S3", genres_response)
+# print()
 
 genres_csv_content = genres_response['Body'].read().decode('utf-8')
 genres = pd.read_csv(StringIO(genres_csv_content))
 
 ratings_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_ratings)
-print("the response of the S3", ratings_response)
-print()
+# print("the response of the S3", ratings_response)
+# print()
 
 # Read the Parquet file into a DataFrame
 parquet_body = BytesIO(ratings_response['Body'].read())
