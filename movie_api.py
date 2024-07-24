@@ -451,7 +451,7 @@ class similar_recs(Resource):
 
 
     def post(self):
-        print("in similar recommendations POST Movies")
+        # print("in similar recommendations POST Movies")
         # @app.route('/recommend', methods=['POST'])
         # def get_recommendations():
         data = request.json
@@ -517,16 +517,14 @@ def clean_movie_datasets():
     return genres_cleaned, ratings_cleaned
 
 
-# Call Cleaning Function
-genres_cleaned, ratings_cleaned = clean_movie_datasets()
 
 
 class profile_recs(Resource):
     def post(self):
-        print("In Profile Recommendation endpoint")
+        # print("In Profile Recommendation endpoint")
 # @app.route('/recommend', methods=['POST'])
 # def recommend():
-        genres,ratings = read_from_s3()
+        genres_cleaned, ratings_cleaned = clean_movie_datasets()
         data = dict(request.json)
         # Read and cast the movie ratings dictionary
         user_ratings = {int(k): float(v) for k, v in data['ratings'].items()}
@@ -565,7 +563,7 @@ class profile_recs(Resource):
         recommended_movie_details = genres_cleaned[genres_cleaned['movieId'].isin(recommended_movie_ids)]
 
         # Calculate the average rating for each movie
-        average_ratings = ratings.groupby('movieId')['rating'].mean()
+        average_ratings = ratings_cleaned.groupby('movieId')['rating'].mean()
 
         recommended_movie_details = recommended_movie_details.merge(average_ratings, on='movieId')
         recommended_movie_details.rename(columns={
@@ -582,6 +580,7 @@ class profile_recs(Resource):
 class find_movie_title(Resource):
     def post(self):
         data = request.get_json()
+        genres_cleaned, ratings_cleaned = clean_movie_datasets()
         movie_title = data.get('title')
         # Check for exact match
         exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == movie_title.lower()]
