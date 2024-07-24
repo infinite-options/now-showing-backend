@@ -294,29 +294,56 @@ def helper_icon_img(url):
 # ratings = pd.read_csv("/Users/anisha/Desktop/Infinite Options/Rec Sys/dataset/ratings.csv")
 # genres = pd.read_csv("/Users/anisha/Desktop/Infinite Options/Rec Sys/dataset/movies.csv")
 
-s3_access_key = os.getenv('MW_KEY')
-s3_secret_key = os.getenv('MW_SECRET')
-s3_bucket_name = os.getenv('BUCKET_NAME')
-s3_file_key_ratings = os.getenv('S3_PATH_KEY_RATINGS')
-s3_file_key_genres = os.getenv('S3_PATH_KEY_GENRES')
+#---------------------------------------------------------------------------------------------------------------
+# s3_access_key = os.getenv('MW_KEY')
+# s3_secret_key = os.getenv('MW_SECRET')
+# s3_bucket_name = os.getenv('BUCKET_NAME')
+# s3_file_key_ratings = os.getenv('S3_PATH_KEY_RATINGS')
+# s3_file_key_genres = os.getenv('S3_PATH_KEY_GENRES')
 
-s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
-# print("after s3 connect")
 
-genres_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_genres)
-# print("the response of the S3", genres_response)
-# print()
+# s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
+# # print("after s3 connect")
 
-genres_csv_content = genres_response['Body'].read().decode('utf-8')
-genres = pd.read_csv(StringIO(genres_csv_content))
+# genres_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_genres)
+# # print("the response of the S3", genres_response)
+# # print()
 
-ratings_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_ratings)
-# print("the response of the S3", ratings_response)
-# print()
+# genres_csv_content = genres_response['Body'].read().decode('utf-8')
+# genres = pd.read_csv(StringIO(genres_csv_content))
 
-# Read the Parquet file into a DataFrame
-parquet_body = BytesIO(ratings_response['Body'].read())
-ratings = pd.read_parquet(parquet_body)
+# ratings_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_ratings)
+# # print("the response of the S3", ratings_response)
+# # print()
+
+# # Read the Parquet file into a DataFrame
+# parquet_body = BytesIO(ratings_response['Body'].read())
+# ratings = pd.read_parquet(parquet_body)
+#---------------------------------------------------------------------------------------------------------------
+
+# function to read from s3
+def read_from_s3():
+    # Get S3 credentials and bucket information from environment variables
+    s3_access_key = os.getenv('MW_KEY')
+    s3_secret_key = os.getenv('MW_SECRET')
+    s3_bucket_name = os.getenv('BUCKET_NAME')
+    s3_file_key_ratings = os.getenv('S3_PATH_KEY_RATINGS')
+    s3_file_key_genres = os.getenv('S3_PATH_KEY_GENRES')
+
+    # Initialize S3 client
+    s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
+
+    # Read genres file
+    genres_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_genres)
+    genres_csv_content = genres_response['Body'].read().decode('utf-8')
+    genres = pd.read_csv(StringIO(genres_csv_content))
+
+    # Read ratings file
+    ratings_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_ratings)
+    parquet_body = BytesIO(ratings_response['Body'].read())
+    ratings = pd.read_parquet(parquet_body)
+
+    return genres, ratings
 
 movie_id = 1  # default movie choice
 
@@ -357,10 +384,7 @@ def fetch_tmdb_data(movie_title):
 
 
 def find_similar_movies(movie_id):
-    # print("In find_similar_movies ", movie_id)
-    # print(ratings[ratings["movieId"] == movie_id])
-    # print(ratings[(ratings["movieId"] == movie_id) & (
-    #     ratings["rating"] > 4)])
+    genres,ratings = read_from_s3()
 
     # Find Other Users who liked the same movie
     similar_users = ratings[(ratings["movieId"] == movie_id) & (
@@ -460,6 +484,7 @@ def clean_movie_datasets():
     # Preprocess the dataset
     # Remove movies that do not have any genres listed from both movies and ratings dataset
     # movies = movies[movies['genres'] != '(no genres listed)']
+    genres,ratings = read_from_s3()
     genres_cleaned = genres[genres['genres'] != '(no genres listed)']
 
     # Remove users from the ratings dataset who have rated <= 200 movies
@@ -501,6 +526,7 @@ class profile_recs(Resource):
         print("In Profile Recommendation endpoint")
 # @app.route('/recommend', methods=['POST'])
 # def recommend():
+        genres,ratings = read_from_s3()
         data = dict(request.json)
         # Read and cast the movie ratings dictionary
         user_ratings = {int(k): float(v) for k, v in data['ratings'].items()}
