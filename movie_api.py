@@ -14,50 +14,26 @@ import boto3
 import os.path
 from urllib.parse import urlparse
 from fuzzywuzzy import process
-import urllib.request
-import base64
-from oauth2client import GOOGLE_REVOKE_URI, GOOGLE_TOKEN_URI, client
-from io import BytesIO
-from pytz import timezone as ptz
-import pytz
-from dateutil.relativedelta import relativedelta
-import math
-
-from werkzeug.exceptions import BadRequest, NotFound
-
-from dateutil.relativedelta import *
 from decimal import Decimal
 from datetime import datetime, date, timedelta
-from hashlib import sha512
-from math import ceil
-import string
-import random
 import os
 import hashlib
-
-# regex
-import re
-# from env_keys import BING_API_KEY, RDS_PW
-
-import decimal
-import sys
-import json
 import pytz
 import pymysql
 import requests
-import stripe
-import binascii
 from datetime import datetime
-import datetime as dt
-from datetime import timezone as dtz
-import time
+from dotenv import load_dotenv
+from io import BytesIO
 
 import csv
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
+from io import StringIO
 
 # from env_file import RDS_PW, S3_BUCKET, S3_KEY, S3_SECRET_ACCESS_KEY
 s3 = boto3.client('s3')
+# Load environment variables from the .env file
+load_dotenv()
 
 
 app = Flask(__name__)
@@ -305,9 +281,6 @@ def helper_icon_img(url):
     return file_url
 
 
-
-
-
 # RUN STORED PROCEDURES
 
 
@@ -315,8 +288,60 @@ def helper_icon_img(url):
 
 # MOVIE RECOMMENDATIONS
 
-genres = pd.read_csv('s3://now-showing/movies_genres.csv')
-ratings = pd.read_csv('s3://now-showing/movies_ratings.csv')
+# genres = pd.read_csv('s3://now-showing/movies_genres.csv')
+# ratings = pd.read_csv('s3://now-showing/movies_ratings.csv')
+
+ratings = pd.read_csv("/Users/anisha/Desktop/Infinite Options/Rec Sys/dataset/ratings.csv")
+genres = pd.read_csv("/Users/anisha/Desktop/Infinite Options/Rec Sys/dataset/movies.csv")
+
+# s3_access_key = os.getenv('MW_KEY')
+# s3_secret_key = os.getenv('MW_SECRET')
+# s3_bucket_name = os.getenv('BUCKET_NAME')
+# s3_file_key_ratings = os.getenv('S3_PATH_KEY_RATINGS')
+# s3_file_key_genres = os.getenv('S3_PATH_KEY_GENRES')
+#
+#
+# s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
+# print("after s3 connect")
+#
+# genres_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_genres)
+# print("the response of the S3", genres_response)
+# print()
+#
+# genres_csv_content = genres_response['Body'].read().decode('utf-8')
+# genres_cleaned = pd.read_csv(StringIO(genres_csv_content))
+#
+# ratings_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_ratings)
+# print("the response of the S3", ratings_response)
+# print()
+#
+# ratings_csv_content = ratings_response['Body'].read().decode('utf-8')
+# ratings_cleaned = pd.read_csv(StringIO(ratings_csv_content))
+
+# # Read the Parquet file into a DataFrame
+# parquet_body = BytesIO(ratings_response['Body'].read())
+# ratings = pd.read_parquet(parquet_body)
+
+
+# # Function to read CSV file in chunks from S3 and append each chunk to a DataFrame
+# def read_csv_in_chunks(s3_client, bucket, key, chunksize=10000):
+#     response = s3_client.get_object(Bucket=bucket, Key=key)
+#     csv_body = response['Body']
+#
+#     chunk_list = []
+#
+#     for chunk in pd.read_csv(csv_body, chunksize=chunksize):
+#         chunk_list.append(chunk)
+#
+#     # Concatenate all chunks into a single DataFrame
+#     df = pd.concat(chunk_list, ignore_index=True)
+#     return df
+#
+#
+# # Read CSV file in chunks and append to a DataFrame
+# ratings_cleaned = read_csv_in_chunks(s3_client, s3_bucket_name, s3_file_key_ratings, chunksize=10000)
+# print("the response of the S3")
+
 movie_id = 1  # default movie choice
 
 
@@ -474,7 +499,7 @@ def clean_movie_datasets():
 
     # Remove the movies that have less than 50 ratings
     num_rating = num_rating[num_rating['num_of_rating'] >= 50]
-    ratings_cleaned = ratings_cleaned.merge(num_rating, on='title')
+    ratings_cleaned = ratings_cleaned.merge(num_rating, on='movieId')
     ratings_cleaned.drop_duplicates(['userId', 'movieId'], inplace=True)
 
     # Find the unique movieIds in the merged dataset
@@ -488,12 +513,11 @@ def clean_movie_datasets():
     genres_cleaned.sort_values('movieId')
     ratings_cleaned.sort_values('movieId')
 
-    return(genres_cleaned, ratings_cleaned)
+    return genres_cleaned, ratings_cleaned
 
 
 # Call Cleaning Function
-genres_cleaned, ratings_cleaned = clean_movie_datasets()
-
+# genres_cleaned, ratings_cleaned = clean_movie_datasets()
 
 class profile_recs(Resource):
     def post(self):
@@ -556,7 +580,6 @@ class find_movie_title(Resource):
     def post(self):
         data = request.get_json()
         movie_title = data.get('title')
-
         # Check for exact match
         exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == movie_title.lower()]
         if not exact_match.empty:

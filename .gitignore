@@ -35,6 +35,7 @@ sample.py
 
 # __ files
 __pycache__/
-test.py
 requirement.txt
 .csv
+ratings_cleaned.csv
+genres_cleaned.csv
