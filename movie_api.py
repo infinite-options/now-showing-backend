@@ -35,26 +35,20 @@ s3 = boto3.client('s3')
 # Load environment variables from the .env file
 load_dotenv()
 
-
 app = Flask(__name__)
 cors = CORS(app, resources={r'/api/*': {'origins': '*'}})
 # Set this to false when deploying to live application
 app.config['DEBUG'] = True
 
-
-
-
-
 # SECTION 2:  UTILITIES AND SUPPORT FUNCTIONS
 # EMAIL INFO
-#app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+# app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_SERVER'] = 'smtp.mydomain.com'
 app.config['MAIL_PORT'] = 465
 
 app.config['MAIL_USERNAME'] = 'support@manifestmy.space'
 app.config['MAIL_PASSWORD'] = 'Support4MySpace'
 app.config['MAIL_DEFAULT_SENDER'] = 'support@manifestmy.space'
-
 
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
@@ -68,15 +62,18 @@ s = URLSafeTimedSerializer('thisisaverysecretkey')
 # API
 api = Api(app)
 
-
 # convert to UTC time zone when testing in local time zone
 utc = pytz.utc
+
+
 # These statment return Day and Time in GMT
 # def getToday(): return datetime.strftime(datetime.now(utc), "%Y-%m-%d")
 # def getNow(): return datetime.strftime(datetime.now(utc),"%Y-%m-%d %H:%M:%S")
 
 # These statment return Day and Time in Local Time - Not sure about PST vs PDT
 def getToday(): return datetime.strftime(datetime.now(), "%Y-%m-%d")
+
+
 def getNow(): return datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
 
 
@@ -97,9 +94,6 @@ def getNow(): return datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
 # TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
 
 
-
-
-
 # SECTION 3: DATABASE FUNCTIONALITY
 # RDS for AWS SQL 5.7
 # RDS_HOST = 'pm-mysqldb.cxjnrciilyjq.us-west-1.rds.amazonaws.com'
@@ -108,9 +102,11 @@ RDS_HOST = 'io-mysqldb8.cxjnrciilyjq.us-west-1.rds.amazonaws.com'
 RDS_PORT = 3306
 RDS_USER = 'admin'
 RDS_DB = 'ctb'
-RDS_PW="prashant"   # Not sure if I need this
+RDS_PW = "prashant"  # Not sure if I need this
 # RDS_PW = os.environ.get('RDS_PW')
 S3_BUCKET = "manifest-image-db"
+
+
 # S3_BUCKET = os.environ.get('S3_BUCKET')
 # S3_KEY = os.environ.get('S3_KEY')
 # S3_SECRET_ACCESS_KEY = os.environ.get('S3_SECRET_ACCESS_KEY')
@@ -140,6 +136,7 @@ def connect():
         print("Could not connect to RDS. (API v2)")
         raise Exception("RDS Connection failed. (API v2)")
 
+
 # Disconnect from MySQL database (API v2)
 def disconnect(conn):
     try:
@@ -148,6 +145,7 @@ def disconnect(conn):
     except:
         print("Could not properly disconnect from MySQL database. (API v2)")
         raise Exception("Failure disconnecting from MySQL database. (API v2)")
+
 
 # Execute an SQL command (API v2)
 # Set cmd parameter to 'get' or 'post'
@@ -184,6 +182,7 @@ def execute(sql, cmd, conn, skipSerialization=False):
         # response['sql'] = sql
         return response
 
+
 # Serialize JSON
 def serializeResponse(response):
     try:
@@ -192,7 +191,7 @@ def serializeResponse(response):
                 if type(row[key]) is Decimal:
                     row[key] = float(row[key])
                 elif (type(row[key]) is date or type(row[key]) is datetime) and row[key] is not None:
-                # Change this back when finished testing to get only date
+                    # Change this back when finished testing to get only date
                     row[key] = row[key].strftime("%Y-%m-%d")
                     # row[key] = row[key].strftime("%Y-%m-%d %H-%M-%S")
                 # elif is_json(row[key]):
@@ -206,7 +205,7 @@ def serializeResponse(response):
 
 # RUN STORED PROCEDURES
 
-        # MOVE STORED PROCEDURES HERE
+# MOVE STORED PROCEDURES HERE
 
 
 # Function to upload image to s3
@@ -214,16 +213,16 @@ def allowed_file(filename):
     # Checks if the file is allowed to upload
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
 def helper_upload_img(file):
     bucket = S3_BUCKET
     # creating key for image name
     salt = os.urandom(8)
-    dk = hashlib.pbkdf2_hmac('sha256',  (file.filename).encode(
+    dk = hashlib.pbkdf2_hmac('sha256', (file.filename).encode(
         'utf-8'), salt, 100000, dklen=64)
     key = (salt + dk).hex()
 
     if file and allowed_file(file.filename):
-
         # image link
         filename = 'https://s3-us-west-1.amazonaws.com/' \
                    + str(bucket) + '/' + str(key)
@@ -239,9 +238,9 @@ def helper_upload_img(file):
         return filename
     return None
 
+
 # Function to upload icons
 def helper_icon_img(url):
-
     bucket = S3_BUCKET
     response = requests.get(url, stream=True)
 
@@ -291,59 +290,62 @@ def helper_icon_img(url):
 # genres = pd.read_csv('s3://now-showing/movies_genres.csv')
 # ratings = pd.read_csv('s3://now-showing/movies_ratings.csv')
 
-ratings = pd.read_csv("/Users/anisha/Desktop/Infinite Options/Rec Sys/dataset/ratings.csv")
-genres = pd.read_csv("/Users/anisha/Desktop/Infinite Options/Rec Sys/dataset/movies.csv")
+# ratings = pd.read_csv("/Users/anisha/Desktop/Infinite Options/Rec Sys/dataset/ratings.csv")
+# genres = pd.read_csv("/Users/anisha/Desktop/Infinite Options/Rec Sys/dataset/movies.csv")
 
+# ---------------------------------------------------------------------------------------------------------------
 # s3_access_key = os.getenv('MW_KEY')
 # s3_secret_key = os.getenv('MW_SECRET')
 # s3_bucket_name = os.getenv('BUCKET_NAME')
 # s3_file_key_ratings = os.getenv('S3_PATH_KEY_RATINGS')
 # s3_file_key_genres = os.getenv('S3_PATH_KEY_GENRES')
-#
-#
+
+
 # s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
-# print("after s3 connect")
-#
+# # print("after s3 connect")
+
 # genres_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_genres)
-# print("the response of the S3", genres_response)
-# print()
-#
+# # print("the response of the S3", genres_response)
+# # print()
+
 # genres_csv_content = genres_response['Body'].read().decode('utf-8')
-# genres_cleaned = pd.read_csv(StringIO(genres_csv_content))
-#
+# genres = pd.read_csv(StringIO(genres_csv_content))
+
 # ratings_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_ratings)
-# print("the response of the S3", ratings_response)
-# print()
-#
-# ratings_csv_content = ratings_response['Body'].read().decode('utf-8')
-# ratings_cleaned = pd.read_csv(StringIO(ratings_csv_content))
+# # print("the response of the S3", ratings_response)
+# # print()
 
 # # Read the Parquet file into a DataFrame
 # parquet_body = BytesIO(ratings_response['Body'].read())
 # ratings = pd.read_parquet(parquet_body)
+# ---------------------------------------------------------------------------------------------------------------
 
+# function to read from s3
+def read_from_s3():
+    # Get S3 credentials and bucket information from environment variables
+    s3_access_key = os.getenv('MW_KEY')
+    s3_secret_key = os.getenv('MW_SECRET')
+    s3_bucket_name = os.getenv('BUCKET_NAME')
+    s3_file_key_ratings = os.getenv('S3_PATH_KEY_RATINGS')
+    s3_file_key_genres = os.getenv('S3_PATH_KEY_GENRES')
 
-# # Function to read CSV file in chunks from S3 and append each chunk to a DataFrame
-# def read_csv_in_chunks(s3_client, bucket, key, chunksize=10000):
-#     response = s3_client.get_object(Bucket=bucket, Key=key)
-#     csv_body = response['Body']
-#
-#     chunk_list = []
-#
-#     for chunk in pd.read_csv(csv_body, chunksize=chunksize):
-#         chunk_list.append(chunk)
-#
-#     # Concatenate all chunks into a single DataFrame
-#     df = pd.concat(chunk_list, ignore_index=True)
-#     return df
-#
-#
-# # Read CSV file in chunks and append to a DataFrame
-# ratings_cleaned = read_csv_in_chunks(s3_client, s3_bucket_name, s3_file_key_ratings, chunksize=10000)
-# print("the response of the S3")
+    # Initialize S3 client
+    s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
+
+    # Read genres file
+    genres_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_genres)
+    genres_csv_content = genres_response['Body'].read().decode('utf-8')
+    genres = pd.read_csv(StringIO(genres_csv_content))
+
+    # Read ratings file
+    ratings_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_ratings)
+    parquet_body = BytesIO(ratings_response['Body'].read())
+    ratings = pd.read_parquet(parquet_body)
+
+    return genres, ratings
+
 
 movie_id = 1  # default movie choice
-
 
 # Global variables
 rec_num = 10
@@ -354,7 +356,7 @@ API_KEY = "b8b76ccfa61c6e85ca7e096d905a7d63"
 
 
 def fetch_tmdb_data(movie_title):
-    print("In fetch_tmdb_data ", movie_title )
+    print("In fetch_tmdb_data ", movie_title)
     search_url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={movie_title}"
     response = requests.get(search_url)
     search_data = response.json()
@@ -381,14 +383,11 @@ def fetch_tmdb_data(movie_title):
 
 
 def find_similar_movies(movie_id):
-    # print("In find_similar_movies ", movie_id)
-    # print(ratings[ratings["movieId"] == movie_id])
-    # print(ratings[(ratings["movieId"] == movie_id) & (
-    #     ratings["rating"] > 4)])
+    genres, ratings = read_from_s3()
 
     # Find Other Users who liked the same movie
     similar_users = ratings[(ratings["movieId"] == movie_id) & (
-        ratings["rating"] > 4)]["userId"].unique()
+            ratings["rating"] > 4)]["userId"].unique()
     # print("Similar Users: ", similar_users)
 
     # Find Other Movies that the Similar Users Liked
@@ -399,20 +398,17 @@ def find_similar_movies(movie_id):
     similar_user_recs = similar_user_recs.value_counts() / len(similar_users)
     similar_user_recs = similar_user_recs[similar_user_recs > .1]
 
-
     all_users = ratings[(ratings["movieId"].isin(
         similar_user_recs.index)) & (ratings["rating"] > 4)]
     all_user_recs = all_users["movieId"].value_counts(
     ) / len(all_users["userId"].unique())
 
-
     rec_percentages = pd.concat([similar_user_recs, all_user_recs], axis=1)
     rec_percentages.columns = ["similar", "all"]
 
     rec_percentages["score"] = rec_percentages["similar"] / \
-        rec_percentages["all"]
+                               rec_percentages["all"]
     rec_percentages = rec_percentages.sort_values("score", ascending=False)
-
 
     # print(rec_percentages.head(rec_num))
     # print(genres[genres['movieId'] == movie_id])
@@ -443,15 +439,14 @@ class similar_recs(Resource):
 
             movies_response = movies['result']
 
-            return(movies_response)
+            return (movies_response)
         except:
             print("Movies Endpoint Failed")
         finally:
             disconnect(conn)
 
-
     def post(self):
-        print("in similar recommendations POST Movies")
+        # print("in similar recommendations POST Movies")
         # @app.route('/recommend', methods=['POST'])
         # def get_recommendations():
         data = request.json
@@ -470,12 +465,13 @@ class similar_recs(Resource):
                 if tmdb_data:
                     recommendations.loc[recommendations['title'] ==
                                         row['title'], 'tmdb_data'] = str(tmdb_data)
-                
+
             # print("Before JSON")
 
             return jsonify(recommendations.to_dict(orient='records'))
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+
 
 # -- ---------------------------------------------------------------------
 
@@ -484,6 +480,7 @@ def clean_movie_datasets():
     # Preprocess the dataset
     # Remove movies that do not have any genres listed from both movies and ratings dataset
     # movies = movies[movies['genres'] != '(no genres listed)']
+    genres, ratings = read_from_s3()
     genres_cleaned = genres[genres['genres'] != '(no genres listed)']
 
     # Remove users from the ratings dataset who have rated <= 200 movies
@@ -516,14 +513,12 @@ def clean_movie_datasets():
     return genres_cleaned, ratings_cleaned
 
 
-# Call Cleaning Function
-# genres_cleaned, ratings_cleaned = clean_movie_datasets()
-
 class profile_recs(Resource):
     def post(self):
-        print("In Profile Recommendation endpoint")
-# @app.route('/recommend', methods=['POST'])
-# def recommend():
+        # print("In Profile Recommendation endpoint")
+        # @app.route('/recommend', methods=['POST'])
+        # def recommend():
+        genres_cleaned, ratings_cleaned = clean_movie_datasets()
         data = dict(request.json)
         # Read and cast the movie ratings dictionary
         user_ratings = {int(k): float(v) for k, v in data['ratings'].items()}
@@ -562,7 +557,7 @@ class profile_recs(Resource):
         recommended_movie_details = genres_cleaned[genres_cleaned['movieId'].isin(recommended_movie_ids)]
 
         # Calculate the average rating for each movie
-        average_ratings = ratings.groupby('movieId')['rating'].mean()
+        average_ratings = ratings_cleaned.groupby('movieId')['rating'].mean()
 
         recommended_movie_details = recommended_movie_details.merge(average_ratings, on='movieId')
         recommended_movie_details.rename(columns={
@@ -579,6 +574,7 @@ class profile_recs(Resource):
 class find_movie_title(Resource):
     def post(self):
         data = request.get_json()
+        genres_cleaned, ratings_cleaned = clean_movie_datasets()
         movie_title = data.get('title')
         # Check for exact match
         exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == movie_title.lower()]
@@ -592,7 +588,8 @@ class find_movie_title(Resource):
         # Find the top 5 matching movie titles
         matches = process.extract(movie_title, genres_cleaned['title'], limit=5)
         top_5_titles = [
-            {'title': match[0], 'movieId': int(genres_cleaned[genres_cleaned['title'] == match[0]]['movieId'].values[0])}
+            {'title': match[0],
+             'movieId': int(genres_cleaned[genres_cleaned['title'] == match[0]]['movieId'].values[0])}
             for match in matches
         ]
 
@@ -612,7 +609,6 @@ class find_movie_title(Resource):
 api.add_resource(similar_recs, '/api/v2/similar')
 api.add_resource(profile_recs, '/api/v2/profile')
 api.add_resource(find_movie_title, '/api/v2/findMovieTitle')
-
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=4000)
