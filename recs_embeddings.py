@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
 
 # Load the pre-trained Word2Vec model
-word2vec_model = Word2Vec.load('word2vec_movie_ratings_embeddings.model')
+# word2vec_model = Word2Vec.load('word2vec_movie_ratings_embeddings.model')
 
 app = Flask(__name__)
 api = Api(app)
@@ -21,11 +21,11 @@ def load_model_from_s3():
     s3_file_key_word2vec_model = os.getenv('S3_PATH_KEY_WORD2VEC_MODEL')
 
     s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
-    print("after s3 connect")
+    # after s3 connect
 
     local_model_path = '/tmp/word2vec_movie_ratings_embeddings.model'
     s3_client.download_file(s3_bucket_name, s3_file_key_word2vec_model, local_model_path)
-    print("model downloaded from s3")
+    # model downloaded from s3
 
     model = Word2Vec.load(local_model_path)
     return model
@@ -38,11 +38,9 @@ def get_genres_from_s3():
     s3_file_key_genres = os.getenv('S3_PATH_KEY_GENRES')
 
     s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
-    print("after s3 connect")
 
+    # the response of the S3
     genres_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_genres)
-    print("the response of the S3", genres_response)
-    print()
 
     genres_csv_content = genres_response['Body'].read().decode('utf-8')
     genres_cleaned = pd.read_csv(StringIO(genres_csv_content))
@@ -101,6 +99,8 @@ class ProfileRecs(Resource):
 
         if not ratings:
             return {"error": "No ratings provided"}, 400
+
+        word2vec_model = load_model_from_s3()
 
         user_vector = generate_user_profile(ratings, word2vec_model)
         genres_cleaned = get_genres_from_s3()
