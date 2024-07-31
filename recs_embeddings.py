@@ -14,6 +14,10 @@ app = Flask(__name__)
 api = Api(app)
 
 
+
+
+# -----------------------------
+
 def load_model_from_s3():
     s3_access_key = os.getenv('MW_KEY')
     s3_secret_key = os.getenv('MW_SECRET')
@@ -91,6 +95,15 @@ def recommend_movies(user_vector, model, metadata, top_n=10):
 
     return recommended_movies
 
+class similar_recs(Resource):
+    # print("In test endpoint")
+    def get(self):
+        # response = get_genres_from_s3() 
+        # return jsonify({"recommended_movies": response.head()})
+      
+      
+        return {"message": "Hello, World! This is a GET request."}, 200
+
 
 class ProfileRecs(Resource):
     def post(self):
@@ -111,6 +124,7 @@ class ProfileRecs(Resource):
 
 # POST requests
 api.add_resource(ProfileRecs, '/api/v2/profile')
+api.add_resource(similar_recs, '/api/v2/similar')
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=4000)
