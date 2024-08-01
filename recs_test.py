@@ -1,3 +1,43 @@
+# import os
+# # import boto3
+# # import numpy as np
+# # import pandas as pd
+# # from io import StringIO
+# # from gensim.models import Word2Vec
+# from flask import Flask, request, jsonify
+# from flask_restful import Api, Resource
+
+# # Load the pre-trained Word2Vec model
+# # word2vec_model = Word2Vec.load('word2vec_movie_ratings_embeddings.model')
+
+# app = Flask(__name__)
+# api = Api(app)
+
+
+
+
+# # -----------------------------
+
+
+
+# class similar_recs(Resource):
+#     # print("In test endpoint")
+#     def get(self):
+#         # response = get_genres_from_s3() 
+#         # return jsonify({"recommended_movies": response.head()})
+      
+      
+#         return {"message": "Hello, World! This is a GET request."}, 200
+
+
+
+# # POST requests
+# # api.add_resource(ProfileRecs, '/api/v2/profile')
+# api.add_resource(similar_recs, '/api/v2/similar')
+
+# if __name__ == '__main__':
+#     app.run(host='127.0.0.1', port=4000)
+
 import os
 import boto3
 import numpy as np
@@ -23,15 +63,30 @@ def load_model_from_s3():
     s3_secret_key = os.getenv('MW_SECRET')
     s3_bucket_name = os.getenv('BUCKET_NAME')
     s3_file_key_word2vec_model = os.getenv('S3_PATH_KEY_WORD2VEC_MODEL')
+    print(s3_access_key)
+    print(s3_secret_key )
+    print(s3_bucket_name)
+    print(s3_file_key_word2vec_model)
 
+
+    # s3_bucket_name = "now-showing"
+    # s3_file_key_word2vec_model = "word2vec_movie_ratings_embeddings.model"
+
+
+    print("here 3")
     s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
     # after s3 connect
 
+    print("here 4")
     local_model_path = '/tmp/word2vec_movie_ratings_embeddings.model'
+    print("here 5")
+    print(s3_bucket_name, s3_file_key_word2vec_model, local_model_path)
     s3_client.download_file(s3_bucket_name, s3_file_key_word2vec_model, local_model_path)
     # model downloaded from s3
 
+    print("here 6")
     model = Word2Vec.load(local_model_path)
+    print("here 7")
     return model
 
 
@@ -40,10 +95,20 @@ def get_genres_from_s3():
     s3_secret_key = os.getenv('MW_SECRET')
     s3_bucket_name = os.getenv('BUCKET_NAME')
     s3_file_key_genres = os.getenv('S3_PATH_KEY_GENRES')
+    print("here 8")
+
+    print(s3_access_key)
+    print(s3_secret_key )
+    print(s3_bucket_name)
+    print(s3_file_key_genres)
+
+    # s3_bucket_name = "now-showing"
+    # s3_file_key_genres = "genres_cleaned.csv"
 
     s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
 
     # the response of the S3
+    print(s3_bucket_name, s3_file_key_genres)
     genres_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_genres)
 
     genres_csv_content = genres_response['Body'].read().decode('utf-8')
@@ -113,11 +178,16 @@ class ProfileRecs(Resource):
         if not ratings:
             return {"error": "No ratings provided"}, 400
 
+        print("here 1")
         word2vec_model = load_model_from_s3()
+        print("here 2")
 
         user_vector = generate_user_profile(ratings, word2vec_model)
+        print("here 9")
         genres_cleaned = get_genres_from_s3()
+        print("here 10")
         recommendations = recommend_movies(user_vector, word2vec_model, genres_cleaned, top_n=10)
+        print("here 11")
 
         return jsonify({"recommended_movies": recommendations})
 
