@@ -63,10 +63,10 @@ def load_model_from_s3():
     s3_secret_key = os.getenv('MW_SECRET')
     s3_bucket_name = os.getenv('BUCKET_NAME')
     s3_file_key_word2vec_model = os.getenv('S3_PATH_KEY_WORD2VEC_MODEL')
-    print(s3_access_key)
-    print(s3_secret_key )
-    print(s3_bucket_name)
-    print(s3_file_key_word2vec_model)
+    # print(s3_access_key)
+    # print(s3_secret_key )
+    # print(s3_bucket_name)
+    # print(s3_file_key_word2vec_model)
 
 
     # s3_bucket_name = "now-showing"
@@ -80,7 +80,7 @@ def load_model_from_s3():
     print("here 4")
     local_model_path = '/tmp/word2vec_movie_ratings_embeddings.model'
     print("here 5")
-    print(s3_bucket_name, s3_file_key_word2vec_model, local_model_path)
+    # print(s3_bucket_name, s3_file_key_word2vec_model, local_model_path)
     s3_client.download_file(s3_bucket_name, s3_file_key_word2vec_model, local_model_path)
     # model downloaded from s3
 
@@ -97,10 +97,10 @@ def get_genres_from_s3():
     s3_file_key_genres = os.getenv('S3_PATH_KEY_GENRES')
     print("here 8")
 
-    print(s3_access_key)
-    print(s3_secret_key )
-    print(s3_bucket_name)
-    print(s3_file_key_genres)
+    # print(s3_access_key)
+    # print(s3_secret_key )
+    # print(s3_bucket_name)
+    # print(s3_file_key_genres)
 
     # s3_bucket_name = "now-showing"
     # s3_file_key_genres = "genres_cleaned.csv"
@@ -108,7 +108,7 @@ def get_genres_from_s3():
     s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
 
     # the response of the S3
-    print(s3_bucket_name, s3_file_key_genres)
+    # print(s3_bucket_name, s3_file_key_genres)
     genres_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_genres)
 
     genres_csv_content = genres_response['Body'].read().decode('utf-8')
