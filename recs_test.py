@@ -131,6 +131,14 @@ def generate_user_profile(ratings, model):
     return user_vector
 
 
+def search(title):
+    movies = get_genres_from_s3()
+    matching_movies = movies[movies['title'].str.contains(
+        title, case=False, na=False)]
+    return matching_movies[['movieId', 'title', 'genres']]  # return results
+
+
+
 def recommend_movies(user_vector, model, metadata, top_n=10):
     similarity_scores = []
 
@@ -159,6 +167,22 @@ def recommend_movies(user_vector, model, metadata, top_n=10):
         })
 
     return recommended_movies
+
+
+
+class search_movie(Resource):
+    def post(self):
+        print("In search movie")
+        user_input = request.json
+        title = user_input.get('title')
+        print("Movie: ", title)
+        if not title:
+            return {"error": "No title provided"}, 400
+        titles = search(title)
+        print(titles['movieId'])
+        titles_dict = titles.to_dict(orient='records')
+        return jsonify(titles_dict)
+
 
 class similar_recs(Resource):
     # print("In test endpoint")
@@ -195,6 +219,7 @@ class ProfileRecs(Resource):
 # POST requests
 api.add_resource(ProfileRecs, '/api/v2/profile')
 api.add_resource(similar_recs, '/api/v2/similar')
+api.add_resource(search_movie, '/api/v2/search')
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=4000)
