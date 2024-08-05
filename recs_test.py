@@ -14,21 +14,17 @@
 # api = Api(app)
 
 
-
-
 # # -----------------------------
-
 
 
 # class similar_recs(Resource):
 #     # print("In test endpoint")
 #     def get(self):
-#         # response = get_genres_from_s3() 
+#         # response = get_genres_from_s3()
 #         # return jsonify({"recommended_movies": response.head()})
-      
-      
-#         return {"message": "Hello, World! This is a GET request."}, 200
 
+
+#         return {"message": "Hello, World! This is a GET request."}, 200
 
 
 # # POST requests
@@ -54,8 +50,6 @@ app = Flask(__name__)
 api = Api(app)
 
 
-
-
 # -----------------------------
 
 def load_model_from_s3():
@@ -68,20 +62,20 @@ def load_model_from_s3():
     # print(s3_bucket_name)
     # print(s3_file_key_word2vec_model)
 
-
     # s3_bucket_name = "now-showing"
     # s3_file_key_word2vec_model = "word2vec_movie_ratings_embeddings.model"
 
-
     print("here 3")
-    s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
+    s3_client = boto3.client(
+        's3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
     # after s3 connect
 
     print("here 4")
     local_model_path = '/tmp/word2vec_movie_ratings_embeddings.model'
     print("here 5")
     # print(s3_bucket_name, s3_file_key_word2vec_model, local_model_path)
-    s3_client.download_file(s3_bucket_name, s3_file_key_word2vec_model, local_model_path)
+    s3_client.download_file(
+        "now-showing", "word2vec_movie_ratings_embeddings.model", local_model_path)
     # model downloaded from s3
 
     print("here 6")
@@ -99,17 +93,19 @@ def get_genres_from_s3():
 
     # print(s3_access_key)
     # print(s3_secret_key )
-    # print(s3_bucket_name)
-    # print(s3_file_key_genres)
+    print(s3_bucket_name)
+    print(s3_file_key_genres)
 
     # s3_bucket_name = "now-showing"
     # s3_file_key_genres = "genres_cleaned.csv"
 
-    s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
+    s3_client = boto3.client(
+        's3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
 
     # the response of the S3
     # print(s3_bucket_name, s3_file_key_genres)
-    genres_response = s3_client.get_object(Bucket=s3_bucket_name, Key=s3_file_key_genres)
+    genres_response = s3_client.get_object(
+        Bucket=s3_bucket_name, Key=s3_file_key_genres)
 
     genres_csv_content = genres_response['Body'].read().decode('utf-8')
     genres_cleaned = pd.read_csv(StringIO(genres_csv_content))
@@ -131,6 +127,13 @@ def generate_user_profile(ratings, model):
     return user_vector
 
 
+def search(title):
+    movies = get_genres_from_s3()
+    matching_movies = movies[movies['title'].str.contains(
+        title, case=False, na=False)]
+    return matching_movies[['movieId', 'title', 'genres']]  # return results
+
+
 def recommend_movies(user_vector, model, metadata, top_n=10):
     similarity_scores = []
 
@@ -142,15 +145,17 @@ def recommend_movies(user_vector, model, metadata, top_n=10):
         if user_norm == 0 or movie_norm == 0:
             similarity = 0
         else:
-            similarity = np.dot(user_vector, movie_vector) / (user_norm * movie_norm)
+            similarity = np.dot(user_vector, movie_vector) / \
+                (user_norm * movie_norm)
 
         similarity_scores.append((movie_id, similarity))
 
-    similarity_scores = sorted(similarity_scores, key=lambda x: x[1], reverse=True)
+    similarity_scores = sorted(
+        similarity_scores, key=lambda x: x[1], reverse=True)
     top_recommendations = similarity_scores[:top_n]
-
+    print(top_recommendations)
     recommended_movies = []
-    for movie_id, score in top_recommendations:
+    for movie_id in top_recommendations:
         movie_data = metadata[metadata['movieId'] == int(movie_id)].iloc[0]
         recommended_movies.append({
             'movieId': movie_id,
@@ -160,13 +165,24 @@ def recommend_movies(user_vector, model, metadata, top_n=10):
 
     return recommended_movies
 
+
+class search_movie(Resource):
+    def post(self):
+        user_input = request.json
+        title = user_input.get('title')
+        print("Movie: ", title)
+        if not title:
+            return {"error": "No title provided"}, 400
+
+        titles = search(title)
+        print(titles['movieId'])
+        titles_dict = titles.to_dict(orient='records')
+        return jsonify(titles_dict)
+
+
 class similar_recs(Resource):
     # print("In test endpoint")
     def get(self):
-        # response = get_genres_from_s3() 
-        # return jsonify({"recommended_movies": response.head()})
-      
-      
         return {"message": "Hello, World! This is a GET request."}, 200
 
 
@@ -186,7 +202,8 @@ class ProfileRecs(Resource):
         print("here 9")
         genres_cleaned = get_genres_from_s3()
         print("here 10")
-        recommendations = recommend_movies(user_vector, word2vec_model, genres_cleaned, top_n=10)
+        recommendations = recommend_movies(
+            user_vector, word2vec_model, genres_cleaned, top_n=10)
         print("here 11")
 
         return jsonify({"recommended_movies": recommendations})
@@ -195,7 +212,7 @@ class ProfileRecs(Resource):
 # POST requests
 api.add_resource(ProfileRecs, '/api/v2/profile')
 api.add_resource(similar_recs, '/api/v2/similar')
+api.add_resource(search_movie, '/api/v2/search')
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=4000)
-
