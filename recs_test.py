@@ -7,6 +7,7 @@ from gensim.models import Word2Vec
 from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
 from fuzzywuzzy import process
+import re
 
 
 app = Flask(__name__)
@@ -116,9 +117,13 @@ class findMovieTitle(Resource):
     def post(self):
         data = request.get_json()
         movie_title = data.get('title')
+
+        # Preprocess the movie title to remove common words like 'the'
+        processed_title = re.sub(r'\b(the|a|an)\b', '', movie_title, flags=re.IGNORECASE).strip()
+
         # Check for exact match
         genres_cleaned = get_genres_from_s3()
-        exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == movie_title.lower()]
+        exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == processed_title.lower()]
         if not exact_match.empty:
             result = {
                 'title': exact_match['title'].values[0],
@@ -127,7 +132,7 @@ class findMovieTitle(Resource):
             return jsonify({'exact_match': result})
 
         # Find the top 5 matching movie titles
-        matches = process.extract(movie_title, genres_cleaned['title'], limit=5)
+        matches = process.extract(processed_title, genres_cleaned['title'], limit=5)
         top_5_titles = [
             {'title': match[0],
              'movieId': int(genres_cleaned[genres_cleaned['title'] == match[0]]['movieId'].values[0])}
