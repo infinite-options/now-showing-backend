@@ -8,10 +8,53 @@ from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
 from fuzzywuzzy import process
 import re
+import mysql.connector
+from config import Config
 
 
 app = Flask(__name__)
 api = Api(app)
+app.config.from_object(Config)
+
+
+# Database connection
+def get_db_connection():
+    conn = mysql.connector.connect(
+        host=app.config['MYSQL_HOST'],
+        port=app.config['MYSQL_PORT'],
+        user=app.config['MYSQL_USER'],
+        password=app.config['MYSQL_PASSWORD'],
+        database=app.config['MYSQL_DB']
+    )
+    return conn
+
+
+class AddMovieRating(Resource):
+    def post(self):
+        data = request.get_json()
+        user_id = data.get('user_id')
+        movie_id = data.get('movie_id')
+        rating = data.get('rating')
+
+        if not user_id or not movie_id or not rating:
+            return {"error": "user_id, movie_id, and rating are required"}, 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute(
+                "INSERT INTO user_ratings (user_id, movie_id, rating) VALUES (%s, %s, %s)",
+                (user_id, movie_id, rating)
+            )
+            conn.commit()
+        except mysql.connector.Error as err:
+            return {"error": str(err)}, 500
+        finally:
+            cursor.close()
+            conn.close()
+
+        return {"message": "Rating added successfully"}, 201
 
 
 def get_model_from_s3():
@@ -91,11 +134,6 @@ def recommend_movies(user_vector, model, metadata, top_n=10):
     return recommended_movies
 
 
-class similar_recs(Resource):
-    def get(self):
-        return {"message": "Hello, World! This is a GET request."}, 200
-
-
 class ProfileRecs(Resource):
     def post(self):
         user_input = request.json
@@ -113,7 +151,7 @@ class ProfileRecs(Resource):
         return jsonify({"recommended_movies": recommendations})
 
 
-class findMovieTitle(Resource):
+class FindMovieTitle(Resource):
     def post(self):
         data = request.get_json()
         movie_title = data.get('title')
@@ -144,8 +182,8 @@ class findMovieTitle(Resource):
 
 # POST requests
 api.add_resource(ProfileRecs, '/api/v2/profile')
-api.add_resource(findMovieTitle, '/api/v2/findMovieTitle')
-api.add_resource(similar_recs, '/api/v2/similar')
+api.add_resource(FindMovieTitle, '/api/v2/findMovieTitle')
+api.add_resource(AddMovieRating, '/api/v2/add_movie_rating')
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=4000)
