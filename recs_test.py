@@ -67,6 +67,32 @@ def generate_user_profile(ratings, model):
     return user_vector
 
 
+def fetch_tmdb_data(movie_title):
+    search_url = f"https://api.themoviedb.org/3/search/movie?api_key={api_key}&query={movie_title}"
+    response = requests.get(search_url)
+    search_data = response.json()
+
+    if search_data['results']:
+        movie_id = search_data['results'][0]['id']
+        movie_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={api_key}&language=en-US"
+        credits_url = f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={api_key}&language=en-US"
+
+        movie_response = requests.get(movie_url)
+        credits_response = requests.get(credits_url)
+
+        movie_data = movie_response.json()
+        credits_data = credits_response.json()
+
+        return {
+            "tmdb_id": movie_id,
+            "poster": f"https://image.tmdb.org/t/p/w500{movie_data.get('poster_path')}",
+            "overview": movie_data.get('overview', 'Overview not available'),
+            "rating": f"{movie_data.get('vote_average', 'Not rated')}/10 ({movie_data.get('vote_count', 0)} votes)",
+            "cast": ", ".join([actor['name'] for actor in credits_data.get('cast', [])[:5]])
+        }
+    return None
+
+
 def search(title):
     movies = get_genres_from_s3()
     matching_movies = movies[movies['title'].str.contains(
@@ -140,6 +166,16 @@ def get_watch_providers(api_key, movie_name):
         return "No watch providers found"
 
     return providers_data['results']
+
+
+class movie_data(Resource):
+    def post(self):
+        user_input = request.json
+        title = user_input.get('title')
+        if not title:
+            return {"error": "No title provided"}, 400
+        movie_data = fetch_tmdb_data(title)
+        return jsonify(movie_data)
 
 
 class watch_providers(Resource):
@@ -228,6 +264,7 @@ api.add_resource(findMovieTitle, '/api/v2/findMovieTitle')
 api.add_resource(similar_recs, '/api/v2/similar')
 api.add_resource(search_movie, '/api/v2/search')
 api.add_resource(watch_providers, '/api/v2/providers')
+api.add_resource(movie_data, '/api/v2/movie_data')
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=4000)
