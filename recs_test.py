@@ -7,6 +7,7 @@ from gensim.models import Word2Vec
 from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
 from fuzzywuzzy import process
+import requests
 import re
 import mysql.connector
 from config import Config
@@ -89,13 +90,14 @@ def get_genres_from_s3():
     return genres_cleaned
 
 
-def generate_user_profile(ratings, model):
+def generate_user_profile(ratings, model, genres_cleaned):
     user_vector = np.zeros(model.vector_size)
     total_weight = 0.0
 
-    for movie_id, rating in ratings.items():
-        if str(movie_id) in model.wv:
-            user_vector += model.wv[str(movie_id)] * rating
+    for title, rating in ratings.items():
+        movie_id = genres_cleaned[genres_cleaned['title'] == title]['movieId'].values[0]
+        if int(movie_id) in model.wv:
+            user_vector += model.wv[int(movie_id)] * rating
             total_weight += rating
 
     if total_weight > 0:
@@ -134,6 +136,33 @@ def recommend_movies(user_vector, model, metadata, top_n=10):
     return recommended_movies
 
 
+def fetch_tmdb_data(movie_title):
+    api_key = os.getenv('TMDB_API_KEY')
+    search_url = f"https://api.themoviedb.org/3/search/movie?api_key={api_key}&query={movie_title}"
+    response = requests.get(search_url)
+    search_data = response.json()
+
+    if search_data['results']:
+        movie_id = search_data['results'][0]['id']
+        movie_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={api_key}&language=en-US"
+        credits_url = f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={api_key}&language=en-US"
+
+        movie_response = requests.get(movie_url)
+        credits_response = requests.get(credits_url)
+
+        movie_data = movie_response.json()
+        credits_data = credits_response.json()
+
+        return {
+            "tmdb_id": movie_id,
+            "poster": f"https://image.tmdb.org/t/p/w500{movie_data.get('poster_path')}",
+            "overview": movie_data.get('overview', 'Overview not available'),
+            "rating": f"{movie_data.get('vote_average', 'Not rated')}/10 ({movie_data.get('vote_count', 0)} votes)",
+            "cast": ", ".join([actor['name'] for actor in credits_data.get('cast', [])[:5]])
+        }
+    return None
+
+
 class ProfileRecs(Resource):
     def post(self):
         user_input = request.json
@@ -143,12 +172,23 @@ class ProfileRecs(Resource):
             return {"error": "No ratings provided"}, 400
 
         word2vec_model = get_model_from_s3()
-
-        user_vector = generate_user_profile(ratings, word2vec_model)
         genres_cleaned = get_genres_from_s3()
+
+        # Generate user profile using titles
+        user_vector = generate_user_profile(ratings, word2vec_model, genres_cleaned)
         recommendations = recommend_movies(user_vector, word2vec_model, genres_cleaned, top_n=10)
 
-        return jsonify({"recommended_movies": recommendations})
+        # Add TMDb data to recommendations
+        detailed_recommendations = []
+        for recommendation in recommendations:
+            movie_title = recommendation['title']
+            tmdb_info = fetch_tmdb_data(movie_title)
+
+            if tmdb_info:
+                recommendation.update(tmdb_info)
+            detailed_recommendations.append(recommendation)
+
+        return jsonify({"recommended_movies": detailed_recommendations})
 
 
 class FindMovieTitle(Resource):
