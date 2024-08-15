@@ -19,10 +19,12 @@ api = Api(app)
 # -----------------------------
 
 def load_model_from_s3():
-    s3_access_key = os.getenv('MW_KEY')
-    s3_secret_key = os.getenv('MW_SECRET')
+    s3_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+    # print("in load model, access key: ", s3_access_key)
+    s3_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
     s3_bucket_name = os.getenv('BUCKET_NAME')
     s3_file_key_word2vec_model = os.getenv('S3_PATH_KEY_WORD2VEC_MODEL')
+    # print("in load model, word2vec: ", s3_file_key_word2vec_model)
 
     s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
     # after s3 connect
@@ -36,10 +38,12 @@ def load_model_from_s3():
 
 
 def get_genres_from_s3():
-    s3_access_key = os.getenv('MW_KEY')
-    s3_secret_key = os.getenv('MW_SECRET')
+    s3_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+    # print("in get genres, access key: ", s3_access_key)
+    s3_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
     s3_bucket_name = os.getenv('BUCKET_NAME')
     s3_file_key_genres = os.getenv('S3_PATH_KEY_GENRES')
+    # print("in get genres, word2vec: ", s3_file_key_genres)
 
     s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
 
@@ -107,6 +111,7 @@ class similar_recs(Resource):
 
 class ProfileRecs(Resource):
     def post(self):
+        print("In ProfileRecs")
         user_input = request.json
         ratings = user_input.get('ratings', {})
 
