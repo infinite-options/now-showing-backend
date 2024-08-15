@@ -15,8 +15,8 @@ api = Api(app)
 
 
 def get_model_from_s3():
-    s3_access_key = os.getenv('MW_KEY')
-    s3_secret_key = os.getenv('MW_SECRET')
+    s3_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+    s3_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
     s3_bucket_name = os.getenv('BUCKET_NAME')
     s3_file_key_word2vec_model = os.getenv('S3_PATH_KEY_WORD2VEC_MODEL')
 
@@ -32,8 +32,8 @@ def get_model_from_s3():
 
 
 def get_genres_from_s3():
-    s3_access_key = os.getenv('MW_KEY')
-    s3_secret_key = os.getenv('MW_SECRET')
+    s3_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+    s3_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
     s3_bucket_name = os.getenv('BUCKET_NAME')
     s3_file_key_genres = os.getenv('S3_PATH_KEY_GENRES')
 
