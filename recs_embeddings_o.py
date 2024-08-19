@@ -19,11 +19,10 @@ app.config.from_object(Config)
 
 
 # Database connection
-print("Connecting to Database")
 def get_db_connection():
     conn = mysql.connector.connect(
         host=app.config['MYSQL_HOST'],
-        port=int(app.config['MYSQL_PORT']),
+        port=app.config['MYSQL_PORT'],
         user=app.config['MYSQL_USER'],
         password=app.config['MYSQL_PASSWORD'],
         database=app.config['MYSQL_DB']
@@ -32,9 +31,7 @@ def get_db_connection():
 
 
 class AddMovieRating(Resource):
-    print("Using AddMovieRating")
     def post(self):
-        print("Using AddMovieRating POST")
         data = request.get_json()
         user_id = data.get('user_id')
         movie_id = data.get('movie_id')
@@ -94,18 +91,27 @@ def get_genres_from_s3():
 
 
 def generate_user_profile(ratings, model, genres_cleaned):
+    print("In generate_user_profile")
     user_vector = np.zeros(model.vector_size)
+    print("Ratings: ", ratings)
+    print("Model: ", model)
+    print("Genres Cleaned: ", genres_cleaned)
     total_weight = 0.0
+    print("u1")
 
     for title, rating in ratings.items():
+        print("In GUP loop: ", title)
+        print("Huh: ", genres_cleaned['title'] == title)
         movie_id = genres_cleaned[genres_cleaned['title'] == title]['movieId'].values[0]
+        print("Movie ID: ", movie_id)
         if int(movie_id) in model.wv:
             user_vector += model.wv[int(movie_id)] * rating
             total_weight += rating
-
+        print("after if")
     if total_weight > 0:
         user_vector /= total_weight
 
+    print("before return")
     return user_vector
 
 
@@ -167,31 +173,38 @@ def fetch_tmdb_data(movie_title):
 
 
 class ProfileRecs(Resource):
-    print("In ProfileRecs")
     def post(self):
-        print("In ProfileRecs POST")
+        print("In Profile Recs")
         user_input = request.json
         ratings = user_input.get('ratings', {})
+        print("User Ratings: ", ratings)
 
         if not ratings:
             return {"error": "No ratings provided"}, 400
 
         word2vec_model = get_model_from_s3()
+        print("1")
         genres_cleaned = get_genres_from_s3()
+        print("2")
 
         # Generate user profile using titles
         user_vector = generate_user_profile(ratings, word2vec_model, genres_cleaned)
+        print("3")
         recommendations = recommend_movies(user_vector, word2vec_model, genres_cleaned, top_n=10)
+        print("4")
 
         # Add TMDb data to recommendations
         detailed_recommendations = []
+        print("5")
         for recommendation in recommendations:
+            print("In loop: ", recommendation)
             movie_title = recommendation['title']
             tmdb_info = fetch_tmdb_data(movie_title)
 
             if tmdb_info:
                 recommendation.update(tmdb_info)
             detailed_recommendations.append(recommendation)
+        print("7")
 
         return jsonify({"recommended_movies": detailed_recommendations})
 
@@ -223,26 +236,12 @@ class FindMovieTitle(Resource):
         ]
 
         return jsonify({'matches': top_5_titles})
-    
-class test_api(Resource):
-    def get(self):
-        print("In Test API GET")
-        return {"message": "Hello, World! This is a GET request."}, 200
-    
-    def post(self):
-        print("In Test API POST")
-        data = request.get_json()
-        print("Data Received: ", data)
-        return {"message": "Hello, World! This is a POST request."}, 200
 
 
 # POST requests
 api.add_resource(ProfileRecs, '/api/v2/profile')
 api.add_resource(FindMovieTitle, '/api/v2/findMovieTitle')
 api.add_resource(AddMovieRating, '/api/v2/add_movie_rating')
-# api.add_resource(AddMovieRating, '/api/v2/test')
-api.add_resource(test_api, '/api/v2/test')
-# api.add_resource(test_api, '/api/v2/similar')
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=4000)
