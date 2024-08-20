@@ -8,10 +8,26 @@ from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
 from fuzzywuzzy import process
 import re
+# import mysql.connector
+import pymysql
+from config import Config
 
 
 app = Flask(__name__)
 api = Api(app)
+app.config.from_object(Config)
+
+# Database connection
+def get_db_connection():
+    # conn = mysql.connector.connect(
+    conn = pymysql.connect(
+        host=app.config['MYSQL_HOST'],
+        port=int(app.config['MYSQL_PORT']),
+        user=app.config['MYSQL_USER'],
+        password=app.config['MYSQL_PASSWORD'],
+        database=app.config['MYSQL_DB']
+    )
+    return conn
 
 
 def get_model_from_s3():
@@ -99,6 +115,34 @@ def recommend_movies(user_vector, model, metadata, top_n=10):
     return recommended_movies
 
 
+class AddMovieRating(Resource):
+    def post(self):
+        print("In Add Movie Rating")
+        data = request.get_json()
+        user_id = data.get('user_id')
+        movie_id = data.get('movie_id')
+        rating = data.get('rating')
+
+        if not user_id or not movie_id or not rating:
+            return {"error": "user_id, movie_id, and rating are required"}, 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute(
+                "INSERT INTO user_ratings (user_id, movie_id, rating) VALUES (%s, %s, %s)",
+                (user_id, movie_id, rating)
+            )
+            conn.commit()
+        except pymysql.connector.Error as err:
+            return {"error": str(err)}, 500
+        finally:
+            cursor.close()
+            conn.close()
+
+        return {"message": "Rating added successfully"}, 201
+
 
 class search_movie(Resource):
     def post(self):
@@ -114,7 +158,7 @@ class search_movie(Resource):
         return jsonify(titles_dict)
 
 
-class similar_recs(Resource):
+class test(Resource):
     def get(self):
         return {"message": "Hello, World! This is a GET request."}, 200
 
@@ -136,40 +180,41 @@ class ProfileRecs(Resource):
         return jsonify({"recommended_movies": recommendations})
 
 
-class findMovieTitle(Resource):
-    def post(self):
-        data = request.get_json()
-        movie_title = data.get('title')
+# class findMovieTitle(Resource):
+#     def post(self):
+#         data = request.get_json()
+#         movie_title = data.get('title')
 
-        # Preprocess the movie title to remove common words like 'the'
-        processed_title = re.sub(r'\b(the|a|an)\b', '', movie_title, flags=re.IGNORECASE).strip()
+#         # Preprocess the movie title to remove common words like 'the'
+#         processed_title = re.sub(r'\b(the|a|an)\b', '', movie_title, flags=re.IGNORECASE).strip()
 
-        # Check for exact match
-        genres_cleaned = get_genres_from_s3()
-        exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == processed_title.lower()]
-        if not exact_match.empty:
-            result = {
-                'title': exact_match['title'].values[0],
-                'movieId': int(exact_match['movieId'].values[0])
-            }
-            return jsonify({'exact_match': result})
+#         # Check for exact match
+#         genres_cleaned = get_genres_from_s3()
+#         exact_match = genres_cleaned[genres_cleaned['title'].str.lower() == processed_title.lower()]
+#         if not exact_match.empty:
+#             result = {
+#                 'title': exact_match['title'].values[0],
+#                 'movieId': int(exact_match['movieId'].values[0])
+#             }
+#             return jsonify({'exact_match': result})
 
-        # Find the top 5 matching movie titles
-        matches = process.extract(processed_title, genres_cleaned['title'], limit=5)
-        top_5_titles = [
-            {'title': match[0],
-             'movieId': int(genres_cleaned[genres_cleaned['title'] == match[0]]['movieId'].values[0])}
-            for match in matches
-        ]
+#         # Find the top 5 matching movie titles
+#         matches = process.extract(processed_title, genres_cleaned['title'], limit=5)
+#         top_5_titles = [
+#             {'title': match[0],
+#              'movieId': int(genres_cleaned[genres_cleaned['title'] == match[0]]['movieId'].values[0])}
+#             for match in matches
+#         ]
 
-        return jsonify({'matches': top_5_titles})
+#         return jsonify({'matches': top_5_titles})
 
 
 # POST requests
+api.add_resource(test, '/api/v2/test')
 api.add_resource(ProfileRecs, '/api/v2/profile')
-api.add_resource(findMovieTitle, '/api/v2/findMovieTitle')
-api.add_resource(similar_recs, '/api/v2/similar')
+# api.add_resource(findMovieTitle, '/api/v2/findMovieTitle')
 api.add_resource(search_movie, '/api/v2/search')
+api.add_resource(AddMovieRating, '/api/v2/add_movie_rating')
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=4000)
