@@ -342,5 +342,5 @@ api.add_resource(test_api, '/api/v2/testAPI')
 api.add_resource(test_db, '/api/v2/testDB')
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=4000)
+    app.run(host='127.0.0.1', port=4070)
 
