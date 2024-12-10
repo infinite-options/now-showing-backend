@@ -1,22 +1,24 @@
 import os
 import boto3
-# import numpy as np
-# import pandas as pd
-# from io import StringIO
-# from gensim.models import Word2Vec
+import numpy as np
+import pandas as pd
+from io import StringIO
+from gensim.models import Word2Vec
 from datetime import date, datetime
 from dotenv import load_dotenv
 from decimal import Decimal
 from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
-# from fuzzywuzzy import process
-# import re
+from fuzzywuzzy import process
+import re
 import pymysql
 from werkzeug.exceptions import BadRequest, InternalServerError
 
 
 app = Flask(__name__)
 api = Api(app)
+
+print("In Movie Recommendation engine")
 
 
 # --------------- DATABASE CONFIGUATION ------------------
@@ -149,9 +151,10 @@ def get_model_from_s3():
     s3_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
     s3_bucket_name = os.getenv('BUCKET_NAME')
     s3_file_key_word2vec_model = os.getenv('S3_PATH_KEY_WORD2VEC_MODEL')
+    print("S3 Connect: ", s3_bucket_name)
 
     s3_client = boto3.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key)
-    # after s3 connect
+    print("After S3 Connect")
 
     local_model_path = '/tmp/word2vec_movie_ratings_embeddings.model'
     s3_client.download_file(s3_bucket_name, s3_file_key_word2vec_model, local_model_path)
@@ -251,6 +254,7 @@ class similar_recs(Resource):
 
 class ProfileRecs(Resource):
     def post(self):
+        print("In ProfileRecs POST")
         user_input = request.json
         ratings = user_input.get('ratings', {})
 
