@@ -52,7 +52,7 @@ toml==0.10.2
 tqdm==4.66.5
 troposphere==4.8.1
 tzdata==2024.2
-urllib3==2.2.2
+urllib3<1.27,>=1.25.4
 Werkzeug==3.0.3
 wrapt==1.16.0
 yarl==1.9.4
